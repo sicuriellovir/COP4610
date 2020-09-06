@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#include "pathSearch.c"
+#include "tildeExpansion.c"
 
 typedef struct {
 	int size;
@@ -65,7 +67,7 @@ eVars* get_eVars()
 //need to loop through tokens and process them
 void process_tokens(tokenlist* tokens, eVars* vars)
 {
-    
+
 }
 
 tokenlist *new_tokenlist(void)
