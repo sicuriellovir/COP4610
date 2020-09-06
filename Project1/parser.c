@@ -67,7 +67,10 @@ eVars* get_eVars()
 //need to loop through tokens and process them
 void process_tokens(tokenlist* tokens, eVars* vars)
 {
-
+    if (pathSearch(tokens->items[0], vars->PATH) == 1)
+        printf("%s is a valid executable.\n", tokens->items[0]);
+    else
+        printf("%s is not a valid execuatble.\n", tokens->items[0]);
 }
 
 tokenlist *new_tokenlist(void)
