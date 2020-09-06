@@ -1,11 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 typedef struct {
 	int size;
 	char **items;
 } tokenlist;
+
+typedef struct {
+    char* PWD;
+    char* USER;
+    char* MACHINE;
+    char* HOME;
+    char* PATH;
+} eVars;
+
+eVars* get_eVars();
+void process_tokens();
 
 char *get_input(void);
 tokenlist *get_tokens(char *input);
@@ -16,26 +28,44 @@ void free_tokens(tokenlist *tokens);
 
 int main()
 {
+    eVars* vars = get_eVars();
 	while (1) {
-		printf("> ");
+		printf("%s@%s : %s> ", vars->USER, vars->MACHINE, vars->PWD);
 
 		/* input contains the whole command
 		 * tokens contains substrings from input split by spaces
 		 */
-
 		char *input = get_input();
 		printf("whole input: %s\n", input);
 
 		tokenlist *tokens = get_tokens(input);
-		for (int i = 0; i < tokens->size; i++) {
-			printf("token %d: (%s)\n", i, tokens->items[i]);
-		}
+
+		process_tokens(tokens, vars);
 
 		free(input);
 		free_tokens(tokens);
 	}
 
 	return 0;
+}
+
+//returns the necessary environment variables in c-string format
+eVars* get_eVars()
+{
+    eVars* vars = (eVars *) malloc(sizeof(eVars));
+    vars->PWD = getenv("PWD");
+    vars->MACHINE = getenv("MACHINE");
+    vars->USER = getenv("USER");
+    vars->HOME = getenv("HOME");
+    vars->PATH = getenv("PATH");
+
+    return vars;
+}
+
+//need to loop through tokens and process them
+void process_tokens(tokenlist* tokens, eVars* vars)
+{
+    
 }
 
 tokenlist *new_tokenlist(void)
