@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "pathSearch.c"
 #include "tildeExpansion.c"
@@ -20,6 +22,7 @@ typedef struct {
 
 eVars* get_eVars();
 void process_tokens();
+void externCmdExec(char* pathToCmd, tokenlist* cmdArgs);
 
 char *get_input(void);
 tokenlist *get_tokens(char *input);
@@ -64,13 +67,72 @@ eVars* get_eVars()
     return vars;
 }
 
-//need to loop through tokens and process them
+//need to loop through tokens and process them. As of now, this just demonstrates
+//the external command execution
 void process_tokens(tokenlist* tokens, eVars* vars)
 {
-    if (pathSearch(tokens->items[0], vars->PATH) == 1)
-        printf("%s is a valid executable.\n", tokens->items[0]);
+    char* result = pathSearch(tokens->items[0], vars->PATH);
+    if (result != NULL)
+    {
+        tokenlist* args = new_tokenlist();
+        for (int i = 1; i < tokens->size; i++)
+            add_token(args, tokens->items[i]);
+
+        printf("%s is a valid executable. Attempting to run...\n", tokens->items[0]);
+        externCmdExec(result, args);
+        free_tokens(args);
+    }
     else
-        printf("%s is not a valid execuatble.\n", tokens->items[0]);
+        printf("%s is not a valid executable.\n", tokens->items[0]);
+
+    free(result);
+}
+
+//executes an external command. The pathToCmd parameter must be the full
+//path to the command as a null-terminated c-string. The cmdArgs parameter
+//must be a tokenlist in which each token is an argument.
+void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
+{
+    char** args;
+    //runs if there were no cmdArgs passed
+    if (cmdArgs == NULL || cmdArgs->size == 0)
+    {
+        args = (char**) malloc(2 * sizeof(char*));
+        args[0] = malloc(strlen(pathToCmd) + 1);
+        strcpy(args[0], pathToCmd);
+        args[1] = NULL;
+    }
+    //runs if there was at least one argument in cmdArgs
+    else
+    {
+        args = (char**) malloc((cmdArgs->size + 2) * sizeof(char*));
+        args[0] = malloc(strlen(pathToCmd) + 1);
+        strcpy(args[0], pathToCmd);
+        args[cmdArgs->size + 1] = NULL;
+        for (int i = 0; i < cmdArgs->size; i++)
+        {
+            args[i + 1] = malloc(strlen(cmdArgs->items[i]) + 1);
+            strcpy(args[i + 1], cmdArgs->items[i]);
+        }
+        for (int i = 0; i < cmdArgs->size + 1; i++)
+            printf("arg %d: %s\n", i, args[i]);
+    }
+
+    pid_t pid = fork();
+
+    //runs if child process could not be created
+    if (pid == -1)
+        fprintf(stderr, "Error creating child process.\n");
+    //runs in child process. Executes cmd
+    else if (pid == 0)
+        execv(pathToCmd, args);
+    //runs in parent process. Waits for cmd execution to finish
+    else
+        waitpid(pid, NULL, 0);
+
+    //loops through args (array of c-strings) and deallocates each string
+    for (int i = 0; i < cmdArgs->size + 2; i++)
+        free(args[i]);
 }
 
 tokenlist *new_tokenlist(void)

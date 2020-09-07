@@ -13,8 +13,9 @@ int doesExecutableExist(char* path)
 }
 
 //searches through the path (passed in as a c-string) for an executable
-//with the name passed into cmd as a c-string. Returns 1 if found, 0 otherwise
-int pathSearch(char* cmd, char* path)
+//with the name passed into cmd as a c-string. Returns the path to the
+//command if found or NULL otherwise
+char* pathSearch(char* cmd, char* path)
 {
     char *buf = (char *) malloc(strlen(path) + strlen(cmd) + 1);
     strcpy(buf, path);
@@ -24,12 +25,14 @@ int pathSearch(char* cmd, char* path)
         strcpy(temp, tok);
         strcat(temp, "/");
         strcat(temp, cmd);
-        printf("Checking: %s\n", temp);
         if (doesExecutableExist(temp))
-            return 1;
+        {
+            free(buf);
+            return temp;
+        }
         tok = strtok(NULL, ":");
         free(temp);
     }
     free(buf);
-    return 0;
+    return NULL;
 }
