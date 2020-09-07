@@ -114,8 +114,6 @@ void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
             args[i + 1] = malloc(strlen(cmdArgs->items[i]) + 1);
             strcpy(args[i + 1], cmdArgs->items[i]);
         }
-        for (int i = 0; i < cmdArgs->size + 1; i++)
-            printf("arg %d: %s\n", i, args[i]);
     }
 
     pid_t pid = fork();
