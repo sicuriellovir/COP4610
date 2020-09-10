@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 
 #include "pathSearch.c"
 #include "tildeExpansion.c"
+#include "functions.h"
 
 typedef struct {
 	int size;
@@ -33,6 +32,8 @@ void free_tokens(tokenlist *tokens);
 
 int main()
 {
+	char **command = NULL;  // holds commands (array of strings)
+    int commandSize = 0; 
     eVars* vars = get_eVars();
 	while (1) {
 		printf("%s@%s : %s> ", vars->USER, vars->MACHINE, vars->PWD);
@@ -47,8 +48,25 @@ int main()
 
 		process_tokens(tokens, vars);
 
-		free(input);
-		free_tokens(tokens);
+		command = tokens->items;
+		commandSize = tokens->size;
+
+		if(builtin(command) == 1)
+		{
+			if(builtinExecution(command, commandSize) == 1)
+			{
+				commandSize++;
+			}
+			else
+			{
+				printf("Error executing builtin command\n");
+			}
+		}
+
+		
+
+		// free(input);
+		// free_tokens(tokens);
 	}
 
 	return 0;
