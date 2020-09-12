@@ -5,6 +5,7 @@ int builtinExecution (char ** command, int numCommands);
 void cdcmd(char *path);
 void exitcmd(int cmds);
 void echocmd(char ** command);
+void jobscmd(int b[], int b_size);
 
 char builtin (char ** cmd)
 {
@@ -40,6 +41,8 @@ int builtinExecution (char ** command, int numCommands)
     else if(strcmp(command[0], builtstring[2]) == 0)
     {
         // we need part 9 to do jobs
+        // call jobscmd(int b[], int b_size)
+        return 1;
     }
     //echo
     else if(strcmp(command[0], builtstring[3]) == 0)
@@ -113,4 +116,13 @@ void echocmd(char ** command)
         ++temp;
     }
     printf("\n");            
+}
+
+void jobscmd(int b[], int b_size)
+{
+	int i = 0;
+	for (i = 0; i < b_size; i++)
+    {
+    	printf("%d \n", b[i]);
+    }
 }
