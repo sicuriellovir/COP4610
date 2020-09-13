@@ -1,14 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "pathSearch.c"
 #include "tildeExpansion.c"
 #include "functions.h"
 
 typedef struct {
-    int size;
-    char **items;
+	int size;
+	char **items;
 } tokenlist;
 
 typedef struct {
@@ -19,9 +21,16 @@ typedef struct {
     char* PATH;
 } eVars;
 
+typedef struct {
+    char* pathToCmd;
+    tokenlist* tokenArgs;
+} cmd;
+
 eVars* get_eVars();
 void process_tokens();
-void externCmdExec(char* pathToCmd, tokenlist* cmdArgs);
+pid_t externCmdExec(char* pathToCmd, tokenlist* cmdArgs);
+void piping(cmd** cmds, int numOfCmds);
+char** tokensToExecvArgs(char* pathToCmd, tokenlist* cmdArgs);
 
 char *get_input(void);
 tokenlist *get_tokens(char *input);
@@ -32,7 +41,6 @@ void free_tokens(tokenlist *tokens);
 void outputRedirection(tokenlist *tokens);
 void inputRedirection(tokenlist* tokens);
 void redirection(tokenlist *tokens);
-
 
 int main()
 {
@@ -67,7 +75,7 @@ int main()
                 printf("Error executing builtin command\n");
             }
         }
-        //redirection
+            //redirection
         else
         {
             commandSize++;
@@ -94,31 +102,156 @@ eVars* get_eVars()
     return vars;
 }
 
-//need to loop through tokens and process them. As of now, this just demonstrates
-//the external command execution
+//need to loop through tokens and process them
 void process_tokens(tokenlist* tokens, eVars* vars)
 {
-    char* result = pathSearch(tokens->items[0], vars->PATH);
-    if (result != NULL)
-    {
-        tokenlist* args = new_tokenlist();
-        for (int i = 1; i < tokens->size; i++)
-            add_token(args, tokens->items[i]);
+    cmd** cmds = (cmd **) malloc(sizeof(cmd*));
+    cmds[0] = NULL;
+    int cmdsSize = 0;
+    int temp = 0;
+    int pipeInTokens = 0;
 
-        printf("%s is a valid executable. Attempting to run...\n", tokens->items[0]);
-        externCmdExec(result, args);
-        free_tokens(args);
+    for (int i = 0; i < tokens->size; i++)
+    {
+        if (strcmp(tokens->items[i], "|") == 0)
+            pipeInTokens = 1;
+    }
+    if (pipeInTokens == 1) {
+        for (int i = 0; i < tokens->size; i++) {
+            if (strcmp(tokens->items[i], "|") == 0 || i == tokens->size - 1) {
+                cmds = (cmd **) realloc(cmds, (cmdsSize + 1) * sizeof(cmd *));
+                cmds[cmdsSize] = (cmd *) malloc(sizeof(cmd));
+                cmds[cmdsSize]->pathToCmd = pathSearch(tokens->items[temp], vars->PATH);
+                cmds[cmdsSize]->tokenArgs = new_tokenlist();
+
+                for (int x = temp + 1; x < i; x++)
+                    add_token(cmds[cmdsSize]->tokenArgs, tokens->items[x]);
+                if (i == tokens->size - 1)
+                    add_token(cmds[cmdsSize]->tokenArgs, tokens->items[i]);
+
+                temp = i + 1;
+                cmdsSize++;
+            }
+        }
+        piping(cmds, cmdsSize);
+        for (int i = 0; i < cmdsSize; i++) {
+            free_tokens(cmds[i]->tokenArgs);
+            free(cmds[i]->pathToCmd);
+            free(cmds[i]);
+        }
+        free(cmds);
     }
     else
-        printf("%s is not a valid executable.\n", tokens->items[0]);
-
-    free(result);
+    {
+        char* path = pathSearch(tokens->items[0], vars->PATH);
+        if (path == NULL)
+            printf("Could not find command in path.\n");
+        else
+        {
+            printf("Found command in path. Attempting to execute\n");
+            tokenlist cmdArgs = *new_tokenlist();
+            for (int i = 1; i < tokens->size; i++)
+                add_token(&cmdArgs, tokens->items[i]);
+            externCmdExec(path, &cmdArgs);
+        }
+    }
 }
 
 //executes an external command. The pathToCmd parameter must be the full
 //path to the command as a null-terminated c-string. The cmdArgs parameter
-//must be a tokenlist in which each token is an argument.
-void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
+//must be a tokenlist in which each token is an argument. The wait parameter
+//indicates whether the parent process should wait for the child process to
+//finish. Pass 0 if you don't want it to wait, pass any other integer if you do.
+pid_t externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
+{
+    char** args = tokensToExecvArgs(pathToCmd, cmdArgs);
+
+    pid_t pid = fork();
+
+    //runs if child process could not be created
+    if (pid == -1)
+        fprintf(stderr, "Error creating child process.\n");
+    //runs in child process. Executes command
+    else if (pid == 0)
+        execv(pathToCmd, args);
+    //runs in parent process. Waits for command execution to finish
+    waitpid(pid, NULL, 0);
+
+    //loops through args (array of c-strings) and deallocates each string
+    for (int i = 0; i < cmdArgs->size + 2; i++)
+        free(args[i]);
+
+    return pid;
+}
+
+//pipes the output of one command to the input of the next command and repeats
+//for all commands. Takes in an array of cmds and the number of commands in the array.
+void piping(cmd** cmds, int numOfCmds)
+{
+    pid_t pid;
+    int* old_p_fds = (int*) malloc(2 * sizeof(int));
+    int* new_p_fds = (int*) malloc(2 * sizeof(int));
+    pipe(old_p_fds);
+
+    for (int i = 0; i < numOfCmds; i++)
+    {
+        pipe(new_p_fds);
+        char* path = cmds[i]->pathToCmd;
+        char** args = tokensToExecvArgs(path, cmds[i]->tokenArgs);
+
+        pid = fork();
+
+        if (pid == -1)
+            fprintf(stderr, "Piping: Error creating process for command %d", i);
+        else if (pid == 0)
+        {
+            if (i == 0)
+            {
+                close(old_p_fds[0]);
+                close(old_p_fds[1]);
+                close(new_p_fds[0]);
+            }
+            if (i == numOfCmds - 1)
+            {
+                close(new_p_fds[0]);
+                close(new_p_fds[1]);
+                close(old_p_fds[1]);
+            }
+            if (i != 0)
+            {
+                close(0);
+                dup(old_p_fds[0]);
+                close(old_p_fds[0]);
+            }
+            if (i != numOfCmds - 1)
+            {
+                close(1);
+                dup(new_p_fds[1]);
+                close(new_p_fds[1]);
+            }
+            execv(path, args);
+            exit(1);
+        }
+        else
+        {
+            close(old_p_fds[0]);
+            close(old_p_fds[1]);
+            waitpid(pid, NULL, 0);
+            free(old_p_fds);
+            old_p_fds = new_p_fds;
+            new_p_fds = (int*) malloc(2 * sizeof(int));
+
+            for (int x = 0; args[x] != NULL; x++)
+                free(args[x]);
+        }
+    }
+    free(old_p_fds);
+    free(new_p_fds);
+}
+
+//converts a tokenlist with command arguments to an array of c-strings
+//that execv can use to start a process
+char** tokensToExecvArgs(char* pathToCmd, tokenlist* cmdArgs)
 {
     char** args;
     //runs if there were no cmdArgs passed
@@ -129,7 +262,7 @@ void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
         strcpy(args[0], pathToCmd);
         args[1] = NULL;
     }
-        //runs if there was at least one argument in cmdArgs
+    //runs if there was at least one argument in cmdArgs
     else
     {
         args = (char**) malloc((cmdArgs->size + 2) * sizeof(char*));
@@ -143,95 +276,81 @@ void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
         }
     }
 
-    pid_t pid = fork();
-
-    //runs if child process could not be created
-    if (pid == -1)
-        fprintf(stderr, "Error creating child process.\n");
-        //runs in child process. Executes cmd
-    else if (pid == 0)
-        execv(pathToCmd, args);
-        //runs in parent process. Waits for cmd execution to finish
-    else
-        waitpid(pid, NULL, 0);
-
-    //loops through args (array of c-strings) and deallocates each string
-    for (int i = 0; i < cmdArgs->size + 2; i++)
-        free(args[i]);
+    return args;
 }
 
 tokenlist *new_tokenlist(void)
 {
-    tokenlist *tokens = (tokenlist *) malloc(sizeof(tokenlist));
-    tokens->size = 0;
-    tokens->items = (char **) malloc(sizeof(char *));
-    tokens->items[0] = NULL; /* make NULL terminated */
-    return tokens;
+	tokenlist *tokens = (tokenlist *) malloc(sizeof(tokenlist));
+	tokens->size = 0;
+	tokens->items = (char **) malloc(sizeof(char *));
+	tokens->items[0] = NULL; /* make NULL terminated */
+	return tokens;
 }
 
 void add_token(tokenlist *tokens, char *item)
 {
-    int i = tokens->size;
+	int i = tokens->size;
 
-    tokens->items = (char **) realloc(tokens->items, (i + 2) * sizeof(char *));
-    tokens->items[i] = (char *) malloc(strlen(item) + 1);
-    tokens->items[i + 1] = NULL;
-    strcpy(tokens->items[i], item);
+	tokens->items = (char **) realloc(tokens->items, (i + 2) * sizeof(char *));
+	tokens->items[i] = (char *) malloc(strlen(item) + 1);
+	tokens->items[i + 1] = NULL;
+	strcpy(tokens->items[i], item);
 
-    tokens->size += 1;
+	tokens->size += 1;
 }
 
 char *get_input(void)
 {
-    char *buffer = NULL;
-    int bufsize = 0;
+	char *buffer = NULL;
+	int bufsize = 0;
 
-    char line[5];
-    while (fgets(line, 5, stdin) != NULL) {
-        int addby = 0;
-        char *newln = strchr(line, '\n');
-        if (newln != NULL)
-            addby = newln - line;
-        else
-            addby = 5 - 1;
+	char line[5];
+	while (fgets(line, 5, stdin) != NULL) {
+		int addby = 0;
+		char *newln = strchr(line, '\n');
+		if (newln != NULL)
+			addby = newln - line;
+		else
+			addby = 5 - 1;
 
-        buffer = (char *) realloc(buffer, bufsize + addby);
-        memcpy(&buffer[bufsize], line, addby);
-        bufsize += addby;
+		buffer = (char *) realloc(buffer, bufsize + addby);
+		memcpy(&buffer[bufsize], line, addby);
+		bufsize += addby;
 
-        if (newln != NULL)
-            break;
-    }
+		if (newln != NULL)
+			break;
+	}
 
-    buffer = (char *) realloc(buffer, bufsize + 1);
-    buffer[bufsize] = 0;
+	buffer = (char *) realloc(buffer, bufsize + 1);
+	buffer[bufsize] = 0;
 
-    return buffer;
+	return buffer;
 }
 
 tokenlist *get_tokens(char *input)
 {
-    char *buf = (char *) malloc(strlen(input) + 1);
-    strcpy(buf, input);
+	char *buf = (char *) malloc(strlen(input) + 1);
+	strcpy(buf, input);
 
-    tokenlist *tokens = new_tokenlist();
+	tokenlist *tokens = new_tokenlist();
 
-    char *tok = strtok(buf, " ");
-    while (tok != NULL) {
-        add_token(tokens, tok);
-        tok = strtok(NULL, " ");
-    }
+	char *tok = strtok(buf, " ");
+	while (tok != NULL) {
+		add_token(tokens, tok);
+		tok = strtok(NULL, " ");
+	}
 
-    free(buf);
-    return tokens;
+	free(buf);
+	return tokens;
 }
 
 void free_tokens(tokenlist *tokens)
 {
-    for (int i = 0; i < tokens->size; i++)
-        free(tokens->items[i]);
+	for (int i = 0; i < tokens->size; i++)
+		free(tokens->items[i]);
 
-    free(tokens);
+	free(tokens);
 }
 
 void outputRedirection(tokenlist* tokens)
@@ -294,7 +413,7 @@ void inputRedirection(tokenlist* tokens)
         i++;
     }
 
-    if (operator != tokens->size) 
+    if (operator != tokens->size)
     {
         if (tokens->size >= 3)
         {
@@ -318,15 +437,15 @@ void inputRedirection(tokenlist* tokens)
             strcpy(fileName, (tokens->items)[tokens->size - 2]);
             int file = open(fileName, O_RDONLY);
 
-            if (file < 0) 
+            if (file < 0)
             {
                 printf("Error Opening Input File.\n");
                 exit(1);
             }
-        } 
+        }
         else
             printf("Error With Input Redirection.\n");
-    } 
+    }
     else
         printf("Missing Name For Redirection.\n");
 }
@@ -352,5 +471,5 @@ void redirection(tokenlist* tokens)
         inputRedirection(tokens);
     else if (temp == '>')
         outputRedirection(tokens);
-    
+
 }
