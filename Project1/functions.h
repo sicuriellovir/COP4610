@@ -1,4 +1,14 @@
 #include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 char builtin (char ** cmd);
 int builtinExecution (char ** command, int numCommands);
@@ -7,6 +17,7 @@ void exitcmd(int cmds);
 void echocmd(char ** command);
 void jobscmd(int b[], int b_size);
 
+//part 10
 char builtin (char ** cmd)
 {
     int builtins = 4;
@@ -31,20 +42,20 @@ int builtinExecution (char ** command, int numCommands)
         cdcmd(command[1]);
         return 1;
     }
-    // exit
+        // exit
     else if(strcmp(command[0], builtstring[1]) == 0)
     {
         exitcmd(numCommands);
         return 1;
     }
-    //jobs
+        //jobs
     else if(strcmp(command[0], builtstring[2]) == 0)
     {
         // we need part 9 to do jobs
         // call jobscmd(int b[], int b_size)
         return 1;
     }
-    //echo
+        //echo
     else if(strcmp(command[0], builtstring[3]) == 0)
     {
         echocmd(command);
@@ -68,6 +79,7 @@ void cdcmd(char *path)
         printf("%s: No such file or directory.\n", path);
     }
 }
+
 void exitcmd(int cmds)
 {
     printf("Commands executed: %d\n", cmds);
@@ -115,14 +127,14 @@ void echocmd(char ** command)
         counter++;
         ++temp;
     }
-    printf("\n");            
+    printf("\n");
 }
 
 void jobscmd(int b[], int b_size)
 {
-	int i = 0;
-	for (i = 0; i < b_size; i++)
+    int i = 0;
+    for (i = 0; i < b_size; i++)
     {
-    	printf("%d \n", b[i]);
+        printf("%d \n", b[i]);
     }
 }
