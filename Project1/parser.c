@@ -7,8 +7,8 @@
 #include "functions.h"
 
 typedef struct {
-	int size;
-	char **items;
+    int size;
+    char **items;
 } tokenlist;
 
 typedef struct {
@@ -29,47 +29,56 @@ tokenlist *get_tokens(char *input);
 tokenlist *new_tokenlist(void);
 void add_token(tokenlist *tokens, char *item);
 void free_tokens(tokenlist *tokens);
+void outputRedirection(tokenlist *tokens);
+void inputRedirection(tokenlist* tokens);
+void redirection(tokenlist *tokens);
+
 
 int main()
 {
-	char **command = NULL;  // holds commands (array of strings)
-    int commandSize = 0; 
+    char **command = NULL;  // holds commands (array of strings)
+    int commandSize = 0;
     eVars* vars = get_eVars();
-	while (1) {
-		printf("%s@%s : %s> ", vars->USER, vars->MACHINE, vars->PWD);
+    while (1) {
+        printf("%s@%s : %s> ", vars->USER, vars->MACHINE, vars->PWD);
 
-		/* input contains the whole command
-		 * tokens contains substrings from input split by spaces
-		 */
-		char *input = get_input();
-		printf("whole input: %s\n", input);
+        /* input contains the whole command
+         * tokens contains substrings from input split by spaces
+         */
+        char *input = get_input();
+        printf("whole input: %s\n", input);
 
-		tokenlist *tokens = get_tokens(input);
+        tokenlist *tokens = get_tokens(input);
 
-		process_tokens(tokens, vars);
+        process_tokens(tokens, vars);
 
-		command = tokens->items;
-		commandSize = tokens->size;
+        command = tokens->items;
+        commandSize = tokens->size;
 
-		if(builtin(command) == 1)
-		{
-			if(builtinExecution(command, commandSize) == 1)
-			{
-				commandSize++;
-			}
-			else
-			{
-				printf("Error executing builtin command\n");
-			}
-		}
+        //built-in
+        if(builtin(command) == 1)
+        {
+            if(builtinExecution(command, commandSize) == 1)
+            {
+                commandSize++;
+            }
+            else
+            {
+                printf("Error executing builtin command\n");
+            }
+        }
+        //redirection
+        else
+        {
+            commandSize++;
+            redirection(tokens);
+        }
 
-		
+        free(input);
+        free_tokens(tokens);
+    }
 
-		// free(input);
-		// free_tokens(tokens);
-	}
-
-	return 0;
+    return 0;
 }
 
 //returns the necessary environment variables in c-string format
@@ -120,7 +129,7 @@ void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
         strcpy(args[0], pathToCmd);
         args[1] = NULL;
     }
-    //runs if there was at least one argument in cmdArgs
+        //runs if there was at least one argument in cmdArgs
     else
     {
         args = (char**) malloc((cmdArgs->size + 2) * sizeof(char*));
@@ -139,10 +148,10 @@ void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
     //runs if child process could not be created
     if (pid == -1)
         fprintf(stderr, "Error creating child process.\n");
-    //runs in child process. Executes cmd
+        //runs in child process. Executes cmd
     else if (pid == 0)
         execv(pathToCmd, args);
-    //runs in parent process. Waits for cmd execution to finish
+        //runs in parent process. Waits for cmd execution to finish
     else
         waitpid(pid, NULL, 0);
 
@@ -153,74 +162,195 @@ void externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
 
 tokenlist *new_tokenlist(void)
 {
-	tokenlist *tokens = (tokenlist *) malloc(sizeof(tokenlist));
-	tokens->size = 0;
-	tokens->items = (char **) malloc(sizeof(char *));
-	tokens->items[0] = NULL; /* make NULL terminated */
-	return tokens;
+    tokenlist *tokens = (tokenlist *) malloc(sizeof(tokenlist));
+    tokens->size = 0;
+    tokens->items = (char **) malloc(sizeof(char *));
+    tokens->items[0] = NULL; /* make NULL terminated */
+    return tokens;
 }
 
 void add_token(tokenlist *tokens, char *item)
 {
-	int i = tokens->size;
+    int i = tokens->size;
 
-	tokens->items = (char **) realloc(tokens->items, (i + 2) * sizeof(char *));
-	tokens->items[i] = (char *) malloc(strlen(item) + 1);
-	tokens->items[i + 1] = NULL;
-	strcpy(tokens->items[i], item);
+    tokens->items = (char **) realloc(tokens->items, (i + 2) * sizeof(char *));
+    tokens->items[i] = (char *) malloc(strlen(item) + 1);
+    tokens->items[i + 1] = NULL;
+    strcpy(tokens->items[i], item);
 
-	tokens->size += 1;
+    tokens->size += 1;
 }
 
 char *get_input(void)
 {
-	char *buffer = NULL;
-	int bufsize = 0;
+    char *buffer = NULL;
+    int bufsize = 0;
 
-	char line[5];
-	while (fgets(line, 5, stdin) != NULL) {
-		int addby = 0;
-		char *newln = strchr(line, '\n');
-		if (newln != NULL)
-			addby = newln - line;
-		else
-			addby = 5 - 1;
+    char line[5];
+    while (fgets(line, 5, stdin) != NULL) {
+        int addby = 0;
+        char *newln = strchr(line, '\n');
+        if (newln != NULL)
+            addby = newln - line;
+        else
+            addby = 5 - 1;
 
-		buffer = (char *) realloc(buffer, bufsize + addby);
-		memcpy(&buffer[bufsize], line, addby);
-		bufsize += addby;
+        buffer = (char *) realloc(buffer, bufsize + addby);
+        memcpy(&buffer[bufsize], line, addby);
+        bufsize += addby;
 
-		if (newln != NULL)
-			break;
-	}
+        if (newln != NULL)
+            break;
+    }
 
-	buffer = (char *) realloc(buffer, bufsize + 1);
-	buffer[bufsize] = 0;
+    buffer = (char *) realloc(buffer, bufsize + 1);
+    buffer[bufsize] = 0;
 
-	return buffer;
+    return buffer;
 }
 
 tokenlist *get_tokens(char *input)
 {
-	char *buf = (char *) malloc(strlen(input) + 1);
-	strcpy(buf, input);
+    char *buf = (char *) malloc(strlen(input) + 1);
+    strcpy(buf, input);
 
-	tokenlist *tokens = new_tokenlist();
+    tokenlist *tokens = new_tokenlist();
 
-	char *tok = strtok(buf, " ");
-	while (tok != NULL) {
-		add_token(tokens, tok);
-		tok = strtok(NULL, " ");
-	}
+    char *tok = strtok(buf, " ");
+    while (tok != NULL) {
+        add_token(tokens, tok);
+        tok = strtok(NULL, " ");
+    }
 
-	free(buf);
-	return tokens;
+    free(buf);
+    return tokens;
 }
 
 void free_tokens(tokenlist *tokens)
 {
-	for (int i = 0; i < tokens->size; i++)
-		free(tokens->items[i]);
+    for (int i = 0; i < tokens->size; i++)
+        free(tokens->items[i]);
 
-	free(tokens);
+    free(tokens);
+}
+
+void outputRedirection(tokenlist* tokens)
+{
+    int i;
+    int operator = 0;
+
+    for (i = 0; i < (tokens->size)-1; ++i)
+    {
+        if (strcmp((tokens->items)[i], ">") != 0)
+            continue;
+        operator = i;
+    }
+
+    if (operator != tokens->size)
+    {
+        if (tokens->size >= 3)
+        {
+            tokenlist t;
+            t.items = NULL;
+            t.size = 0;
+            int j = 0;
+            while (j < operator)
+            {
+                add_token(&t, (tokens->items)[j]);
+                ++j;
+            }
+
+            t.items = (char **) (t.size == 0 ? malloc(sizeof(char *)) : realloc(t.items,(t.size + 1) * sizeof(char *)));
+
+            t.items[t.size] = (char *) NULL;
+            t.size++;
+
+            char fileName[256];
+            strcpy(fileName, (tokens->items)[tokens->size - 2]);
+            int file = open(fileName, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
+
+            if (file < 0)
+            {
+                printf("Error Opening Output File.\n");
+                exit(1);
+            }
+        }
+        else
+            printf("Error With Output Redirection.\n");
+    }
+    else
+        printf("Missing Name For Redirection.\n");
+}
+
+void inputRedirection(tokenlist* tokens)
+{
+    int i = 0;
+    int operator = 0;
+    while (i < (tokens->size)-1)
+    {
+        if (strcmp((tokens->items)[i], "<") != 0)
+            continue;
+        operator = i;
+        i++;
+    }
+
+    if (operator != tokens->size) 
+    {
+        if (tokens->size >= 3)
+        {
+            tokenlist t;
+            t.items = NULL;
+            t.size = 0;
+            int j = 0;
+            while (j < operator)
+            {
+                add_token(&t, (tokens->items)[j]);
+                ++j;
+            }
+
+            t.items = (char **) (t.size == 0 ? malloc(sizeof(char *)) : realloc(t.items,(t.size + 1) * sizeof(char *)));
+
+            t.items[t.size] = (char *) NULL;
+            t.size++;
+
+            //read
+            char fileName[256];
+            strcpy(fileName, (tokens->items)[tokens->size - 2]);
+            int file = open(fileName, O_RDONLY);
+
+            if (file < 0) 
+            {
+                printf("Error Opening Input File.\n");
+                exit(1);
+            }
+        } 
+        else
+            printf("Error With Input Redirection.\n");
+    } 
+    else
+        printf("Missing Name For Redirection.\n");
+}
+
+void redirection(tokenlist* tokens)
+{
+    int i = 0;
+    char temp = 0;
+
+    while (i < (tokens->size)-1)
+    {
+        if (strcmp((tokens->items)[i], ">") == 0)
+            temp = '>';
+        else
+        {
+            if (strcmp((tokens->items)[i], "<") == 0)
+                temp = '<';
+        }
+        ++i;
+    }
+
+    if (temp == '<')
+        inputRedirection(tokens);
+    else if (temp == '>')
+        outputRedirection(tokens);
+    
 }
