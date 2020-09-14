@@ -69,7 +69,17 @@ void cdcmd(char *path)
     //work in progress
     if(chdir(path) == 0)
     {
-        setenv("PWD", path, 1);
+        if (path[0] != '/')
+        {
+            char* PWD = getenv("PWD");
+            char* extendedPath = (char*) malloc((strlen(PWD) + strlen(path) + 2) * sizeof(char));
+            strcpy(extendedPath, PWD);
+            strcat(extendedPath, "/");
+            strcat(extendedPath, path);
+            setenv("PWD", extendedPath, 1);
+        }
+        else
+            setenv("PWD", path, 1);
     }
     else
     {

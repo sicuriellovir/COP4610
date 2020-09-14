@@ -115,7 +115,7 @@ void process_tokens(tokenlist* tokens, eVars* vars)
     {
         if (strcmp(tokens->items[i], "|") == 0)
             pipeInTokens = 1;
-        if (strcmp(tokens->items[i], "~") == 0)
+        if (strncmp(tokens->items[i], "~", 1) == 0)
         {
             char* tempString = tokens->items[i];
             tokens->items[i] = tildeExpand(tokens->items[i], vars->HOME);
