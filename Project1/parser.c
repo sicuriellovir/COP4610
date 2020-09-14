@@ -46,6 +46,7 @@ int main()
 {
     char **command = NULL;  // holds commands (array of strings)
     int commandSize = 0;
+    int commandsExecuted = 0;
     while (1) {
         eVars vars = *get_eVars();
         printf("%s@%s : %s> ", vars.USER, vars.MACHINE, vars.PWD);
@@ -65,7 +66,7 @@ int main()
         //built-in
         if(builtin(command) == 1)
         {
-            if(builtinExecution(command, commandSize) == 1)
+            if(builtinExecution(command, commandSize, commandsExecuted) == 1)
             {
                 commandSize++;
             }
@@ -80,7 +81,7 @@ int main()
             commandSize++;
             redirection(tokens);
         }
-
+        commandsExecuted++;
         free(input);
         free_tokens(tokens);
     }
@@ -116,9 +117,28 @@ void process_tokens(tokenlist* tokens, eVars* vars)
             pipeInTokens = 1;
         if (strcmp(tokens->items[i], "~") == 0)
         {
-            char* temp = tokens->items[i];
+            char* tempString = tokens->items[i];
             tokens->items[i] = tildeExpand(tokens->items[i], vars->HOME);
-            free(temp);
+            free(tempString);
+        }
+        //environment variables
+        if (strncmp(tokens->items[i], "$", 1) == 0)
+        {
+            char* pathVar = (char*) malloc(strlen(tokens->items[i]) * sizeof(char));
+            pathVar[0] = '\0';
+            for (int x = 1; x < strlen(tokens->items[i]); x++)
+            {
+                pathVar[x - 1] = tokens->items[i][x];
+                pathVar[x] = '\0';
+            }
+            //directly copying the return value of getenv to the tokenlist will result
+            //in an error when deallocating the tokens, so the return value of getenv
+            //must first be placed in a string (newString)
+            char* oldString = tokens->items[i];
+            char* newString = getenv(pathVar);
+            tokens->items[i] = (char*) malloc((strlen(newString) + 1) * sizeof(char));
+            strcpy(tokens->items[i], newString);
+            free(oldString);
         }
     }
     if (pipeInTokens == 1) {
@@ -157,12 +177,9 @@ void process_tokens(tokenlist* tokens, eVars* vars)
             strcat(pwdPath, tokens->items[0]);
             if (doesExecutableExist(pwdPath) == 1)
                 externCmdExec(pwdPath, NULL);
-            else
-                printf("Could not find command in path or PWD. Checking builtins\n");
         }
-        else
+        else if (strcmp(tokens->items[0], "echo") != 0)
         {
-            printf("Found command in path. Attempting to execute\n");
             tokenlist cmdArgs = *new_tokenlist();
             for (int i = 1; i < tokens->size; i++)
                 add_token(&cmdArgs, tokens->items[i]);
@@ -173,9 +190,7 @@ void process_tokens(tokenlist* tokens, eVars* vars)
 
 //executes an external command. The pathToCmd parameter must be the full
 //path to the command as a null-terminated c-string. The cmdArgs parameter
-//must be a tokenlist in which each token is an argument. The wait parameter
-//indicates whether the parent process should wait for the child process to
-//finish. Pass 0 if you don't want it to wait, pass any other integer if you do.
+//must be a tokenlist in which each token is an argument.
 pid_t externCmdExec(char* pathToCmd, tokenlist* cmdArgs)
 {
     char** args = tokensToExecvArgs(pathToCmd, cmdArgs);

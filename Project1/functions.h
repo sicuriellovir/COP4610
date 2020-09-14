@@ -11,7 +11,7 @@
 #include <fcntl.h>
 
 char builtin (char ** cmd);
-int builtinExecution (char ** command, int numCommands);
+int builtinExecution (char ** command, int numCommands, int commandsExecuted);
 void cdcmd(char *path);
 void exitcmd(int cmds);
 void echocmd(char ** command);
@@ -32,7 +32,7 @@ char builtin (char ** cmd)
     return 0;
 }
 
-int builtinExecution (char ** command, int numCommands)
+int builtinExecution (char ** command, int numCommands, int commandsExecuted)
 {
     char *builtstring[] = { "cd", "exit", "jobs", "echo", NULL};
     // cd
@@ -44,10 +44,7 @@ int builtinExecution (char ** command, int numCommands)
     }
         // exit
     else if(strcmp(command[0], builtstring[1]) == 0)
-    {
-        exitcmd(numCommands);
-        return 1;
-    }
+        exitcmd(commandsExecuted);
         //jobs
     else if(strcmp(command[0], builtstring[2]) == 0)
     {
@@ -69,6 +66,7 @@ int builtinExecution (char ** command, int numCommands)
 
 void cdcmd(char *path)
 {
+    //work in progress
     if(chdir(path) == 0)
     {
         setenv("PWD", path, 1);
