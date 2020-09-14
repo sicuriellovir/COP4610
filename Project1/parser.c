@@ -27,7 +27,7 @@ typedef struct {
 } cmd;
 
 eVars* get_eVars();
-void process_tokens();
+void process_tokens(tokenlist* tokens, eVars* vars);
 pid_t externCmdExec(char* pathToCmd, tokenlist* cmdArgs);
 void piping(cmd** cmds, int numOfCmds);
 char** tokensToExecvArgs(char* pathToCmd, tokenlist* cmdArgs);
@@ -46,19 +46,18 @@ int main()
 {
     char **command = NULL;  // holds commands (array of strings)
     int commandSize = 0;
-    eVars* vars = get_eVars();
     while (1) {
-        printf("%s@%s : %s> ", vars->USER, vars->MACHINE, vars->PWD);
+        eVars vars = *get_eVars();
+        printf("%s@%s : %s> ", vars.USER, vars.MACHINE, vars.PWD);
 
         /* input contains the whole command
          * tokens contains substrings from input split by spaces
          */
         char *input = get_input();
-        printf("whole input: %s\n", input);
 
         tokenlist *tokens = get_tokens(input);
 
-        process_tokens(tokens, vars);
+        process_tokens(tokens, &vars);
 
         command = tokens->items;
         commandSize = tokens->size;
@@ -115,6 +114,12 @@ void process_tokens(tokenlist* tokens, eVars* vars)
     {
         if (strcmp(tokens->items[i], "|") == 0)
             pipeInTokens = 1;
+        if (strcmp(tokens->items[i], "~") == 0)
+        {
+            char* temp = tokens->items[i];
+            tokens->items[i] = tildeExpand(tokens->items[i], vars->HOME);
+            free(temp);
+        }
     }
     if (pipeInTokens == 1) {
         for (int i = 0; i < tokens->size; i++) {
@@ -145,7 +150,16 @@ void process_tokens(tokenlist* tokens, eVars* vars)
     {
         char* path = pathSearch(tokens->items[0], vars->PATH);
         if (path == NULL)
-            printf("Could not find command in path.\n");
+        {
+            char* pwdPath = (char*) malloc((strlen(vars->PWD) + strlen(tokens->items[0]) + 2) * sizeof(char));
+            strcpy(pwdPath, vars->PWD);
+            strcat(pwdPath, "/");
+            strcat(pwdPath, tokens->items[0]);
+            if (doesExecutableExist(pwdPath) == 1)
+                externCmdExec(pwdPath, NULL);
+            else
+                printf("Could not find command in path or PWD. Checking builtins\n");
+        }
         else
         {
             printf("Found command in path. Attempting to execute\n");
