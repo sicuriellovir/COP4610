@@ -69,7 +69,6 @@ int builtinExecution (char ** command, int numCommands)
 
 void cdcmd(char *path)
 {
-    //work in progress
     if(chdir(path) == 0)
     {
         setenv("PWD", path, 1);
