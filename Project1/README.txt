@@ -1,12 +1,12 @@
 Project 1    |     Introduction to Operating Systems   |   COP 4610
 
-Team members:  Alec Walther (GIthub: apwal1), Virginia Sicuriello Level (GIthub: sicuriellovir), Sean (Yixuan) Liu (Github: Designexplained)
+Team members:  Alec Walther (Github: apwal1), Virginia Sicuriello Level (Github: sicuriellovir), Sean (Yixuan) Liu (Github: Designexplained)
 
 Division of Labor:
-Alec Walther (GIthub: apwal1):
+Alec Walther (Github: apwal1):
 Contributed to Parsing, Prompt, Piping, External command execution, Tilde Expansion, Makefile, tested Built-in functions.
 
-Virginia Sicuriello Level (GIthub: sicuriellovir):
+Virginia Sicuriello Level (Github: sicuriellovir):
 Contributed to Built-in functions, I/O redirections, tested External command execution.
 
 Sean (Yixuan) Liu (Github: Designexplained)
@@ -14,8 +14,8 @@ Contributed to documentation and Built-in functions.
 
 Contents of the Tar Archive: 
 
-functions.h         	This file contains our built in functions such as exit, cd PATH, echo ARGS, and jobs.
-parser.c        	    	This file contains our parser, prompt. external command execution, I/O Redirection, as well as piping, 
+functions.h       This file contains our built in functions such as exit, cd PATH, echo ARGS, and jobs.
+parser.c        	This file contains our parser, prompt. external command execution, I/O Redirection, as well as piping, 
 pathSearch.c     	This file contains our pathSearch.
 tildeExpansion.c	This file contains our tildeExpansion.
 
