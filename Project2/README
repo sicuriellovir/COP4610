@@ -17,9 +17,8 @@ Contents of the Tar Archive:
 Part 1 folder
 	empty.c empty C program
 	part1.c copy of empty.c with seven system calls
-		empty.trace the use of a strace is to check if we added correctly the system calls
-	part1.trace the use of a strace is to check if we added
-		correctly the system calls, so when part1.c is called it produces 7 system calls.
+		empty.trace the output of strace on empty.c
+	part1.trace the output of strace on part1.c which has 7 more system calls than empty.trace
 Part 2 folder
 	my_timer.c kernel module to call current_kernel_time() and 
 		stores the time value.
