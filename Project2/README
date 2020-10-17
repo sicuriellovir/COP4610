@@ -30,15 +30,24 @@ Part 3 folder
 
 Compiling our Executable with Makefile:
 After switching to the root user
-insmod elevator.ko
 make
+insmod elevator.ko
 gcc consumer.c
 ./a.out --start
 gcc producer.c
 ./a.out
 
-Bugs Not Fixed Upon Submission:
+To stop the elevator and remove the module (as root):
+gcc consumer.c
+./a.out --stop
+rmmod elevator
 
+Bugs Not Fixed Upon Submission:
+- When removing the elevator module before it has been stopped with consumer.c, the module is removed but there is an error
+that can be seen when typing dmesg. The error doesn't really tell us what went wrong or where the error occurred, but it
+can be assumed that the problem is in the exit function (elevator_exit) for the module since that is when the error occurs.
+We have made sure that all dynamically allocated memory is deleted, the proc file is removed, and the mutex lock is destroyed,
+but we can't seem to find the source of this error.
 
 Fixed Bugs:
 
