@@ -1,0 +1,44 @@
+Project 2    |     Introduction to Operating Systems   |   COP 4610
+
+Team members:  Alec Walther (Github: apwal1), Virginia Sicuriello Level (Github: sicuriellovir), Sean (Yixuan) Liu (Github: Designexplained)
+
+Division of Labor:
+Alec Walther (Github: apwal1):
+Contributed to part 1 and part 3
+
+Virginia Sicuriello Level (Github: sicuriellovir):
+Contributed to part 3 and documentation
+
+Sean (Yixuan) Liu (Github: Designexplained)
+Contributed to part 2. 
+
+Contents of the Tar Archive: 
+
+Part 1 folder
+	empty.c empty C program
+	part1.c copy of empty.c with seven system calls
+		empty.trace the use of a strace is to check if we added correctly the system calls
+	part1.trace the use of a strace is to check if we added
+		correctly the system calls, so when part1.c is called it produces 7 system calls.
+Part 2 folder
+	my_timer.c kernel module to call current_kernel_time() and 
+		stores the time value.
+	Makefile makefile to compile my_timer.c
+Part 3 folder
+	elevator.c scheduling algorithm for an elevator
+	Makefile makefile to compile elevator.c
+
+Compiling our Executable with Makefile:
+After switching to the root user
+insmod elevator.ko
+make
+gcc consumer.c
+./a.out --start
+gcc producer.c
+./a.out
+
+Bugs Not Fixed Upon Submission:
+
+
+Fixed Bugs:
+
