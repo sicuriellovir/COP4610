@@ -11,8 +11,6 @@
 #include <linux/string.h>
 #include <linux/mutex.h>
 
-MODULE_LICENSE("GPL");
-
 //max length of procf read message
 #define BUF_LEN 1000
 
@@ -99,6 +97,8 @@ void loadPassengersIntoElevator(void);
 void unloadPassengersFromElevator(void);
 void infectElevator(void);
 void deallocatePassList(struct Passenger* pList);
+
+MODULE_LICENSE("GPL");
 
 //implementation of the start_elevator syscall
 long start_elevator(void) 
