@@ -58,7 +58,8 @@ be 0 if the elevator is not deactivating or 1 otherwise */
 //number of passengers waiting to board the elevator
 	int numWaiting;
 
-	struct mutex mutex
+	struct mutex mutex;
+
 } elevator;
 
 //prototype for procfile_read
@@ -123,17 +124,20 @@ long issue_request(int start_floor, int destination_floor, int type)
 	if (start_floor > 10 || start_floor < 1 || destination_floor > 10 ||
 		destination_floor < 1 || (type != 0 && type != 1))
 		return 1;
-
+		
+	struct Passenger* pass = kmalloc(sizeof(struct Passenger), __GFP_RECLAIM);
 //creates the passenger and adds it to the appropriate floor's passenger list
 //returns without making changes if memory allocation failed
-	struct Passenger* pass = kmalloc(sizeof(struct Passenger), __GFP_RECLAIM);
-	if (pass == NULL)
-		return -ENOMEM;
-	pass->infected = type;
-	pass->destinationFloor = destination_floor;
-	list_add_tail(&pass->passList, &floorPassengerLists[start_floor - 1].passList);
-
-	elevator.numWaiting += 1;
+		if (pass == NULL)
+			return -ENOMEM;
+		pass->infected = type;
+		pass->destinationFloor = destination_floor;
+	if (mutex_lock_interruptible(&elevator.mutex) == 0)
+	{
+		list_add_tail(&pass->passList, &floorPassengerLists[start_floor - 1].passList);
+		elevator.numWaiting += 1;
+	}
+	mutex_unlock(&elevator.mutex);
 
 	return 0;
 }
@@ -177,22 +181,32 @@ int mainLoop(void* arg)
 				unloadPassengersFromElevator();
 				loadPassengersIntoElevator();
 
-//labels the elevator as deactivating if the thread should stop
-//(happens when stop_elevator is called)
-				if (kthread_should_stop() && elevator.deactivating == 0)
-					elevator.deactivating = 1;
 
-//returns from the thread if the elevator has finished deactivating
+				if (mutex_lock_interruptible(&elevator.mutex) == 0)
+				{
+					//labels the elevator as deactivating if the thread should stop
+					//(happens when stop_elevator is called)
+					if (kthread_should_stop() && elevator.deactivating == 0)
+						elevator.deactivating = 1;
+				}
+				mutex_unlock(&elevator.mutex);
+
+				//returns from the thread if the elevator has finished deactivating
 				if (elevator.deactivating == 1 && elevator.numOfPassengers == 0)
 					return 1;
 
 				if (elevator.numWaiting == 0 && elevator.numOfPassengers == 0)
-					elevator.state = IDLE;
+				{
+					if (mutex_lock_interruptible(&elevator.mutex) == 0)
+						elevator.state = IDLE;
+					mutex_unlock(&elevator.mutex);
+				}
 			}
-
 			if (elevator.state != IDLE)
 			{
-				elevator.state = DOWN;
+				if (mutex_lock_interruptible(&elevator.mutex) == 0)
+					elevator.state = DOWN;
+				mutex_unlock(&elevator.mutex);
 				loadPassengersIntoElevator();
 			}
 
@@ -201,22 +215,34 @@ int mainLoop(void* arg)
 				unloadPassengersFromElevator();
 				loadPassengersIntoElevator();
 
-//labels the elevator as deactivating if the thread should stop
-//(happens when stop_elevator is called)
-				if (kthread_should_stop() && elevator.deactivating == 0)
-					elevator.deactivating = 1;
+				if (mutex_lock_interruptible(&elevator.mutex) == 0)
+				{
+					//labels the elevator as deactivating if the thread should stop
+					//(happens when stop_elevator is called)
+					if (kthread_should_stop() && elevator.deactivating == 0)
+						elevator.deactivating = 1;	
+				}
+				mutex_unlock(&elevator.mutex);
 
-//returns from the thread if the elevator has finished deactivating
+				//returns from the thread if the elevator has finished deactivating
 				if (elevator.deactivating == 1 && elevator.numOfPassengers == 0)
 					return 1;
 
 				if (elevator.numWaiting == 0 && elevator.numOfPassengers == 0)
-					elevator.state = IDLE;
+				{
+					if (mutex_lock_interruptible(&elevator.mutex) == 0)
+						elevator.state = IDLE;
+					mutex_unlock(&elevator.mutex);
+				}
 			}
 		}
-
-		if (elevator.deactivating == 1 && elevator.numOfPassengers == 0)
-			return 1;
+		
+		if (mutex_lock_interruptible(&elevator.mutex) == 0)
+		{
+			if (elevator.deactivating == 1 && elevator.numOfPassengers == 0)
+				return 1;			
+		}
+		mutex_unlock(&elevator.mutex);
 	}
 }
 
@@ -473,6 +499,7 @@ static int elevator_init(void) {
 
 //initializes the elevator
 	elevator.state = OFFLINE;
+	mutex_init(&elevator.mutex);
 	elevator.numOfPassengers = 0;
 	elevator.status = 0;
 	elevator.floor = 1;
