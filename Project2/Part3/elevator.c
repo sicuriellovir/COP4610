@@ -9,6 +9,8 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 #include <linux/string.h>
+#include <linux/mutex.h>
+
 MODULE_LICENSE("GPL");
 
 //max length of procf read message
@@ -20,44 +22,45 @@ extern long (*STUB_stop_elevator)(void);
 
 //this will allow us to interact with the running thread for the scheduler
 struct task_struct* schedulerThread = NULL;
-
 //defines the different states of the elevator
 enum elevatorState { OFFLINE, IDLE, LOADING, UP, DOWN };
 
 struct Passenger {
-	//allows us to create a linked list of passengers. There should be one of
-	//these lists for each floor and one for the elevator
+//allows us to create a linked list of passengers. There should be one of
+//these lists for each floor and one for the elevator
 	struct list_head passList;
 
-	//this will be 0 if the passenger is not infected or 1 if they are
+//this will be 0 if the passenger is not infected or 1 if they are
 	int infected;
 
-	//the floor that the passenger wants to go to
+//the floor that the passenger wants to go to
 	int destinationFloor;
 };
 
 struct Elevator {
-	//the elevator's current state
+//the elevator's current state
 	enum elevatorState state;
 
-	//number of passengers in the elevator
+//number of passengers in the elevator
 	int numOfPassengers;
 
-	//the elevator's status (0 if there are no infected passengers, 1 otherwise)
+//the elevator's status (0 if there are no infected passengers, 1 otherwise)
 	int status;
 
-	//the floor that the elevator is currently on
+//the floor that the elevator is currently on
 	int floor;
 
-	//the total number of passengers serviced by the elevator
+//the total number of passengers serviced by the elevator
 	int numServiced;
 
-	/* indicates whether the elevator is in the process of deactivating. It will
-	be 0 if the elevator is not deactivating or 1 otherwise */
+/* indicates whether the elevator is in the process of deactivating. It will
+be 0 if the elevator is not deactivating or 1 otherwise */
 	int deactivating;
 
-	//number of passengers waiting to board the elevator
+//number of passengers waiting to board the elevator
 	int numWaiting;
+
+	struct mutex mutex
 } elevator;
 
 //prototype for procfile_read
@@ -98,25 +101,31 @@ void infectElevator(void);
 void deallocatePassList(struct Passenger* pList);
 
 //implementation of the start_elevator syscall
-long start_elevator(void) {
+long start_elevator(void) 
+{
 	if (elevator.state == OFFLINE)
 	{
-		elevator.state = IDLE;
-		schedulerThread = kthread_run(mainLoop, NULL, "ElevatorScheduler");
-		return 0;
+		if(mutex_lock_interruptible(&elevator.mutex) == 0)
+		{
+			elevator.state = IDLE;
+			schedulerThread = kthread_run(mainLoop, NULL, "ElevatorScheduler");
+			return 0;
+		}
+		mutex_unlock(&elevator.mutex);
 	}
 	return 1;
 }
 
 //implementation of the issue_request syscall
-long issue_request(int start_floor, int destination_floor, int type) {
-	//checks that the parameters are valid
+long issue_request(int start_floor, int destination_floor, int type) 
+{
+//checks that the parameters are valid
 	if (start_floor > 10 || start_floor < 1 || destination_floor > 10 ||
-										destination_floor < 1 || (type != 0 && type != 1))
-			return 1;
+		destination_floor < 1 || (type != 0 && type != 1))
+		return 1;
 
-	//creates the passenger and adds it to the appropriate floor's passenger list
-	//returns without making changes if memory allocation failed
+//creates the passenger and adds it to the appropriate floor's passenger list
+//returns without making changes if memory allocation failed
 	struct Passenger* pass = kmalloc(sizeof(struct Passenger), __GFP_RECLAIM);
 	if (pass == NULL)
 		return -ENOMEM;
@@ -130,20 +139,25 @@ long issue_request(int start_floor, int destination_floor, int type) {
 }
 
 //implementation of the stop_elevator syscall
-long stop_elevator(void) {
+long stop_elevator(void) 
+{
 	if (elevator.deactivating == 1 || elevator.state == OFFLINE)
 		return 1;
 	else
 	{
-		elevator.deactivating = 1;
-		kthread_stop(schedulerThread);
-		//the code below won't run until after the thread returns
-		//(happens when the elevator unloads all passengers)
-		elevator.state = OFFLINE;
-		elevator.deactivating = 0;
-		elevator.status = 0;
-		return 0;
+		if(mutex_lock_interruptible(&elevator.mutex) == 0)
+		{
+			elevator.deactivating = 1;
+			kthread_stop(schedulerThread);
+//the code below won't run until after the thread returns
+//(happens when the elevator unloads all passengers)
+			elevator.state = OFFLINE;
+			elevator.deactivating = 0;
+			elevator.status = 0;
+			return 0;
+		}
 	}
+	mutex_unlock(&elevator.mutex);
 }
 
 /*this is the main loop that will control the elevator's behavior
@@ -163,12 +177,12 @@ int mainLoop(void* arg)
 				unloadPassengersFromElevator();
 				loadPassengersIntoElevator();
 
-				//labels the elevator as deactivating if the thread should stop
-				//(happens when stop_elevator is called)
+//labels the elevator as deactivating if the thread should stop
+//(happens when stop_elevator is called)
 				if (kthread_should_stop() && elevator.deactivating == 0)
 					elevator.deactivating = 1;
 
-				//returns from the thread if the elevator has finished deactivating
+//returns from the thread if the elevator has finished deactivating
 				if (elevator.deactivating == 1 && elevator.numOfPassengers == 0)
 					return 1;
 
@@ -187,12 +201,12 @@ int mainLoop(void* arg)
 				unloadPassengersFromElevator();
 				loadPassengersIntoElevator();
 
-				//labels the elevator as deactivating if the thread should stop
-				//(happens when stop_elevator is called)
+//labels the elevator as deactivating if the thread should stop
+//(happens when stop_elevator is called)
 				if (kthread_should_stop() && elevator.deactivating == 0)
 					elevator.deactivating = 1;
 
-				//returns from the thread if the elevator has finished deactivating
+//returns from the thread if the elevator has finished deactivating
 				if (elevator.deactivating == 1 && elevator.numOfPassengers == 0)
 					return 1;
 
@@ -300,36 +314,40 @@ void loadPassengersIntoElevator(void)
 	struct list_head *dummy;
 	struct Passenger *pass;
 
-	//saves the elevator's state before loading and sets current state to loading
+//saves the elevator's state before loading and sets current state to loading
 	enum elevatorState prevState = elevator.state;
 	elevator.state = LOADING;
 
-	list_for_each_safe(temp, dummy, &floorPassengerLists[elevator.floor - 1].passList)
+	if(mutex_lock_interruptible(&elevator.mutex) == 0)
 	{
-		if (elevator.numOfPassengers == 10 || elevator.deactivating == 1)
-			return;
-		pass = list_entry(temp, struct Passenger, passList);
+		list_for_each_safe(temp, dummy, &floorPassengerLists[elevator.floor - 1].passList)
+		{
+			if (elevator.numOfPassengers == 10 || elevator.deactivating == 1)
+				return;
+			pass = list_entry(temp, struct Passenger, passList);
 
-		/*this extremely long if condition verifies that the passenger is going
-		in the same direction as the elevator and an uninfected passenger isn't
-		going into an infected elevator*/
-		if (((prevState == UP && pass->destinationFloor >= elevator.floor)
+	/*this extremely long if condition verifies that the passenger is going
+	in the same direction as the elevator and an uninfected passenger isn't
+	going into an infected elevator*/
+			if (((prevState == UP && pass->destinationFloor >= elevator.floor)
 				|| (prevState == DOWN && pass->destinationFloor <= elevator.floor))
 				&& !(pass->infected == 0 && elevator.status == 1))
-		{
-			//sleeps for a second then loads the passenger into the elevator
-			ssleep(1);
-			list_move_tail(&pass->passList, &elevatorPassengerList.passList);
-			elevator.numOfPassengers++;
-			elevator.numWaiting--;
+			{
+	//sleeps for a second then loads the passenger into the elevator
+				ssleep(1);
+				list_move_tail(&pass->passList, &elevatorPassengerList.passList);
+				elevator.numOfPassengers++;
+				elevator.numWaiting--;
 
-			//if an infected passenger is entering an uninfected elevator, infect all
-			//passengers in the elevator
-			if (pass->infected == 1 && elevator.status == 0)
-				infectElevator();
+	//if an infected passenger is entering an uninfected elevator, infect all
+	//passengers in the elevator
+				if (pass->infected == 1 && elevator.status == 0)
+					infectElevator();
+			}
 		}
 	}
-	//resets elevator's state to whatever it was before loading
+	mutex_unlock(&elevator.mutex);
+//resets elevator's state to whatever it was before loading
 	elevator.state = prevState;
 }
 
@@ -340,29 +358,31 @@ void unloadPassengersFromElevator(void)
 	struct list_head *dummy;
 	struct Passenger *pass;
 
-	//saves the elevator's state before loading and sets current state to loading
+//saves the elevator's state before loading and sets current state to loading
 	enum elevatorState prevState = elevator.state;
 	elevator.state = LOADING;
-
-	list_for_each_safe(temp, dummy, &elevatorPassengerList.passList)
+	if (mutex_lock_interruptible(&elevator.mutex) == 0)
 	{
-		pass = list_entry(temp, struct Passenger, passList);
-		if (pass->destinationFloor == elevator.floor)
+		list_for_each_safe(temp, dummy, &elevatorPassengerList.passList)
 		{
-			//sleeps for a second then unloads the passenger from the elevator
-			ssleep(1);
-			list_del(temp);
-			kfree(pass);
-			elevator.numOfPassengers--;
-			elevator.numServiced++;
+			pass = list_entry(temp, struct Passenger, passList);
+			if (pass->destinationFloor == elevator.floor)
+			{
+	//sleeps for a second then unloads the passenger from the elevator
+				ssleep(1);
+				list_del(temp);
+				kfree(pass);
+				elevator.numOfPassengers--;
+				elevator.numServiced++;
+			}
 		}
 	}
-
-	//labels the elevator as uninfected if the elevator is empty
+//labels the elevator as uninfected if the elevator is empty
 	if (elevator.numOfPassengers == 0)
 		elevator.status = 0;
 
-	//resets elevator's state to whatever it was before loading
+mutex_unlock(&elevator.mutex);
+//resets elevator's state to whatever it was before loading
 	elevator.state = prevState;
 }
 
@@ -387,7 +407,7 @@ static ssize_t procfile_read(struct file* file, char* ubuf, size_t count, loff_t
 	char* status = kmalloc(11 * sizeof(char), __GFP_RECLAIM);
 	char* temp = kmalloc(BUF_LEN * sizeof(char), __GFP_RECLAIM);
 
-	//determines the text used for the elevator's state
+//determines the text used for the elevator's state
 	if (elevator.state == OFFLINE)
 		strcpy(state, "OFFLINE");
 	else if (elevator.state == IDLE)
@@ -399,18 +419,18 @@ static ssize_t procfile_read(struct file* file, char* ubuf, size_t count, loff_t
 	else if (elevator.state == DOWN)
 		strcpy(state, "DOWN");
 
-	//determines the text used for the elevator's status
+//determines the text used for the elevator's status
 	if (elevator.status == 0)
 		strcpy(status, "Uninfected");
 	else
 		strcpy(status, "Infected");
 
-	//copies the formatted text to the msg that will be returned to the user
+//copies the formatted text to the msg that will be returned to the user
 	snprintf(msg, BUF_LEN, statusTemplate, state, status, elevator.floor,
-					elevator.numOfPassengers, elevator.numWaiting, elevator.numServiced);
+		elevator.numOfPassengers, elevator.numWaiting, elevator.numServiced);
 
-	//determines the string that will be printed for each floor and concatenates
-	//it to the final msg
+//determines the string that will be printed for each floor and concatenates
+//it to the final msg
 	int i = 10;
 	for (; i > 0; i--)
 	{
@@ -419,11 +439,11 @@ static ssize_t procfile_read(struct file* file, char* ubuf, size_t count, loff_t
 		if (elevator.floor == i)
 			floorIndicator = '*';
 		snprintf(temp, BUF_LEN, floorTemplate, floorIndicator, i, numPassOnFloor,
-						getFloorPassengerStr(i));
+			getFloorPassengerStr(i));
 		strcat(msg, temp);
 	}
 
-	//concatenates the final line to the msg
+//concatenates the final line to the msg
 	strcat(msg, "\n( \"|\" for human, \"X\" for zombie )\n");
 
 	procfs_buf_len = strlen(msg);
@@ -431,7 +451,7 @@ static ssize_t procfile_read(struct file* file, char* ubuf, size_t count, loff_t
 	if (*ppos > 0 || count < procfs_buf_len)
 		return 0;
 
-	//sends the final msg to the user
+//sends the final msg to the user
 	if (copy_to_user(ubuf, msg, procfs_buf_len))
 		return -EFAULT;
 
@@ -446,12 +466,12 @@ static ssize_t procfile_read(struct file* file, char* ubuf, size_t count, loff_t
 
 //runs when module is loaded
 static int elevator_init(void) {
-	//sets the stub function pointers to their appropriate functions
+//sets the stub function pointers to their appropriate functions
 	STUB_start_elevator = start_elevator;
 	STUB_issue_request = issue_request;
 	STUB_stop_elevator = stop_elevator;
 
-	//initializes the elevator
+//initializes the elevator
 	elevator.state = OFFLINE;
 	elevator.numOfPassengers = 0;
 	elevator.status = 0;
@@ -459,16 +479,16 @@ static int elevator_init(void) {
 	elevator.deactivating = 0;
 	elevator.numWaiting = 0;
 
-	//initializes the passenger lists for the elevator and each floor
+//initializes the passenger lists for the elevator and each floor
 	int i = 0;
 	for (; i < 10; i++)
 		INIT_LIST_HEAD(&floorPassengerLists[i].passList);
 	INIT_LIST_HEAD(&elevatorPassengerList.passList);
 
-	//creates a proc entry for the elevator
+//creates a proc entry for the elevator
 	proc_entry = proc_create("elevator", 0666, NULL, &procfile_fops);
 
-	//allocates memory for the proc msg
+//allocates memory for the proc msg
 	msg = kmalloc(BUF_LEN * sizeof(char), __GFP_RECLAIM);
 
 	return 0;
@@ -477,7 +497,7 @@ module_init(elevator_init);
 
 //runs when module is unloaded
 static void elevator_exit(void) {
-	//resets the stub function pointers to null
+//resets the stub function pointers to null
 	STUB_start_elevator = NULL;
 	STUB_issue_request = NULL;
 	STUB_stop_elevator = NULL;
@@ -486,13 +506,14 @@ static void elevator_exit(void) {
 	struct list_head *dummy;
 	struct Passenger *pass;
 
-	//deallocates the passenger lists for the elevator and each floor
+//deallocates the passenger lists for the elevator and each floor
 	int i = 0;
 	for (; i < 10; i++)
 		deallocatePassList(&floorPassengerLists[i]);
 	deallocatePassList(&elevatorPassengerList);
 
-	//removes the proc entry
+//removes the proc entry
 	proc_remove(proc_entry);
+	mutex_destroy(&elevator.mutex);
 }
 module_exit(elevator_exit);
