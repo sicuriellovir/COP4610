@@ -36,6 +36,9 @@ gcc consumer.c
 gcc producer.c
 ./a.out
 
+If you would like to watch the output of the elevator, use the following command:
+watch -n 0.5 cat /proc/elevator
+
 To stop the elevator and remove the module (as root):
 gcc consumer.c
 ./a.out --stop
