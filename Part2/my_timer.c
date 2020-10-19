@@ -10,7 +10,6 @@
 #define BUFSIZE  500
  
  
-MODULE_LICENSE("GPL");
 MODULE_AUTHOR("SEANILU");
  
 // to save last called time. 
@@ -18,6 +17,8 @@ static struct timespec preTime={0};
 
 // to generate /proc/timer file
 static struct proc_dir_entry *ent;
+
+MODULE_LICENSE("GPL");
 
 // Adding wrapper of current_kernel_time as it is Deprecated
 /*
@@ -27,7 +28,7 @@ static struct proc_dir_entry *ent;
 	
 	Ref: https://stackoverflow.com/questions/59828144/what-is-the-equivalent-of-current-kernel-time-in-linux-kernel-v5
 */
-static inline struct timespec current_kernel_time(void)
+static inline struct timespec current_kernel_time_wrap(void)
 {
     	struct timespec curTime;	
     	struct timespec64 lTime;
@@ -73,7 +74,7 @@ static ssize_t my_timer_read(struct file *file, char __user *ubuf,size_t count, 
 	}
  
 	// get time
-	curTime = current_kernel_time();
+	curTime = current_kernel_time_wrap();
 	
 	// generate output string
 	len += sprintf(buf,"current time: %ld.%ld \n",curTime.tv_sec,curTime.tv_nsec);
@@ -124,3 +125,4 @@ static void mytimer_cleanup(void)
  
 module_init(mytimer_init);
 module_exit(mytimer_cleanup);
+
