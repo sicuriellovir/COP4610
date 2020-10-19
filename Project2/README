@@ -44,7 +44,7 @@ Using part 2:
 	--------------
 	cat /proc/timer
 
-Using part 3:
+Using part 3 (consumer.c and producer.c were provided on canvas):
 	After switching to the root user (type sudo su then enter password)
 	make
 	insmod elevator.ko
