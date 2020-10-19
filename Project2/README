@@ -10,39 +10,56 @@ Virginia Sicuriello Level (Github: sicuriellovir):
 Contributed to part 3 and documentation
 
 Sean (Yixuan) Liu (Github: Designexplained)
-Contributed to part 2. 
+Contributed to part 2 and documentation
 
 Contents of the Tar Archive: 
 
 Part 1 folder
 	empty.c empty C program
-	part1.c copy of empty.c with seven system calls
-		empty.trace the output of strace on empty.c
-	part1.trace the output of strace on part1.c which has 7 more system calls than empty.trace
+	part1.c: copy of empty.c with seven system calls
+	empty.trace: the output of strace on empty.c
+	part1.trace: the output of strace on part1.c which has 7 more system calls than empty.trace
 Part 2 folder
-	my_timer.c kernel module to call current_kernel_time() and 
-		stores the time value.
-	Makefile makefile to compile my_timer.c
+	my_timer.c: kernel module to call current_kernel_time() and stores the time value.
+	Makefile: makefile to compile my_timer.c
 Part 3 folder
-	elevator.c scheduling algorithm for an elevator
-	Makefile makefile to compile elevator.c
+	elevator.c: scheduling algorithm for an elevator
+	Makefile: makefile to compile elevator.c
 
-Compiling our Executable with Makefile:
-After switching to the root user
-make
-insmod elevator.ko
-gcc consumer.c
-./a.out --start
-gcc producer.c
-./a.out
+Using part 2:
+	To build the module:
+	--------------------
+	sudo apt-get install build-essential linux-headers-$(uname -r)
+	make
 
-If you would like to watch the output of the elevator, use the following command:
-watch -n 0.5 cat /proc/elevator
+	To insert the module:
+	---------------------
+	insmod my_timer.ko
 
-To stop the elevator and remove the module (as root):
-gcc consumer.c
-./a.out --stop
-rmmod elevator
+	To remove module:
+	------------------
+	rmmod my_timer.ko
+
+	To read data:
+	--------------
+	cat /proc/timer
+
+Using part 3:
+	After switching to the root user (type sudo su then enter password)
+	make
+	insmod elevator.ko
+	gcc consumer.c
+	./a.out --start
+	gcc producer.c
+	./a.out
+
+	If you would like to watch the output of the elevator, use the following command:
+	watch -n 0.5 cat /proc/elevator
+
+	To stop the elevator and remove the module (as root):
+	gcc consumer.c
+	./a.out --stop
+	rmmod elevator
 
 Bugs Not Fixed Upon Submission:
 - When removing the elevator module before it has been stopped with consumer.c, the module is removed but there is an error
@@ -52,4 +69,4 @@ We have made sure that all dynamically allocated memory is deleted, the proc fil
 but we can't seem to find the source of this error.
 
 Fixed Bugs:
-
+- We ran into many bugs during development, one of the most prevalent being related to incorrect locking/unlocking of shared data in part 3 of the project. This problem was very tricky to solve and typically required a machine restart when things went wrong. However, after much trial and error, we corrected these problems and everything seems to work perfectly now.
