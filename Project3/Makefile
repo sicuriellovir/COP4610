@@ -1,2 +1,2 @@
-make: main.c BPBInfo.c ls.c
-	gcc main.c BPBInfo.c ls.c -std=c11
+make: main.c helper.c ls.c cd.c
+	gcc main.c helper.c ls.c cd.c -std=c11
