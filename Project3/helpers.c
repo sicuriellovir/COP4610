@@ -126,13 +126,18 @@ struct DIRENTRY** _getDirEntriesFromCluster(unsigned int clusterNum, int fatFile
 
     if (clusterNum != info->RootClus)
     {
-        tempDirEntry = (struct DIRENTRY*) malloc(sizeof(struct DIRENTRY));
-        strcpy(tempDirEntry->DIR_name, ".");
-        tempDirEntry->DIR_Attributes = 0x10;
-        tempDirEntry->DIR_DataCluster = clusterNum;
-        tempDirEntry->DIR_EntryByteOffset = byteOffset;
-        dirEntryArray[0] = tempDirEntry;
-        numDirEntries++;
+        lseek(fatFile_fp, byteOffset, SEEK_SET);
+        read(fatFile_fp, &byte, 1);
+        if (byte == '.')
+        {
+            tempDirEntry = (struct DIRENTRY *) malloc(sizeof(struct DIRENTRY));
+            strcpy(tempDirEntry->DIR_name, ".");
+            tempDirEntry->DIR_Attributes = 0x10;
+            tempDirEntry->DIR_DataCluster = clusterNum;
+            tempDirEntry->DIR_EntryByteOffset = byteOffset;
+            dirEntryArray[0] = tempDirEntry;
+            numDirEntries++;
+        }
     }
     else
         dirEntryArray[0] = NULL;
@@ -171,11 +176,13 @@ struct DIRENTRY** _getDirEntriesFromCluster(unsigned int clusterNum, int fatFile
             tempDirEntry->DIR_DataCluster |= byteBuff[3] << 8;
             tempDirEntry->DIR_DataCluster |= byteBuff[2];
 
+            if (tempDirEntry->DIR_DataCluster == 0)
+                tempDirEntry->DIR_DataCluster = info->RootClus;
+
             lseek(fatFile_fp, offset + 28, SEEK_SET);
             read(fatFile_fp, &tempDirEntry->DIR_fileSize, 4);
 
-            dirEntryArray = (struct DIRENTRY **) realloc(dirEntryArray,
-                                                         sizeof(struct DIRENTRY *) * (numDirEntries + 2));
+            dirEntryArray = (struct DIRENTRY **) realloc(dirEntryArray, sizeof(struct DIRENTRY *) * (numDirEntries + 2));
             dirEntryArray[numDirEntries] = tempDirEntry;
             numDirEntries++;
         }
@@ -219,9 +226,7 @@ unsigned int* _isLastCluster(unsigned int cluster, int fatFile_fp, struct BPBInf
     *entry |= buff[0];
 
     //this if condition tests if the entry indicates that this is the last cluster
-    if (*entry == 0x0FFFFFF8 || *entry == 0x0FFFFFF9 || *entry == 0x0FFFFFFA || *entry == 0x0FFFFFFB
-        || *entry == 0x0FFFFFFC || *entry == 0x0FFFFFFD || *entry == 0x0FFFFFFE || *entry == 0x0FFFFFFF
-        || *entry == 0xFFFFFFFF)
+    if (*entry >= 0x0FFFFFF8)
         return NULL;
     else
         return entry;

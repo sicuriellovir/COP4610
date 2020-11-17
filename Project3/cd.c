@@ -20,12 +20,7 @@ void cd(unsigned int* pwdStartCluster, char* dirName, int fatFile_fp, struct BPB
         if (!strcasecmp(dirName, dirEntryArray[i]->DIR_name))
         {
             if (dirEntryArray[i]->DIR_Attributes == 0x10)
-            {
-                if (dirEntryArray[i]->DIR_DataCluster != 0)
-                    *pwdStartCluster = dirEntryArray[i]->DIR_DataCluster;
-                else
-                    *pwdStartCluster = info->RootClus;
-            }
+                *pwdStartCluster = dirEntryArray[i]->DIR_DataCluster;
             else
                 printf("Error: %s is a file, not a directory\n", dirName);
 

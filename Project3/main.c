@@ -1,7 +1,7 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <string.h>
 #include "ls.h"
 #include "cd.h"
 #include "rm.h"
