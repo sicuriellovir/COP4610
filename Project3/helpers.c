@@ -73,44 +73,80 @@ void BPBInfoInit(struct BPBInfo* info, int fatFile_fp)
 
 //Calculates and returns a NULL terminated array of c-strings with the name of every entry in a directory
 //Takes in the FIRST CLUSTER of the directory, the file pointer for the fat32 file, and the BPBInfo for the file
-struct DIRENTRY** _getDirEntriesFromFirstCluster(unsigned int firstCluster, int fatFile_fp, struct BPBInfo* info)
+//NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
+struct DIRENTRY** _getDirEntriesFromAllClusters(unsigned int firstCluster, int fatFile_fp, struct BPBInfo* info)
+{
+    unsigned int *currentCluster = &firstCluster;
+    unsigned int temp;
+
+    unsigned int numDirEntries = 0;
+    struct DIRENTRY** dirEntryArray = (struct DIRENTRY**) malloc(sizeof(struct DIRENTRY*));
+    struct DIRENTRY** tempDirEntryArray;
+
+    dirEntryArray[0] = NULL;
+
+    while (currentCluster != NULL)
+    {
+        tempDirEntryArray = _getDirEntriesFromCluster(*currentCluster, fatFile_fp, info);
+        for (int i = 0; tempDirEntryArray[i] != NULL; i++)
+        {
+            dirEntryArray = (struct DIRENTRY**) realloc(dirEntryArray, sizeof(struct DIRENTRY*) * (numDirEntries + 2));
+            dirEntryArray[numDirEntries] = tempDirEntryArray[i];
+            numDirEntries++;
+        }
+        free(tempDirEntryArray);
+
+        temp = *currentCluster;
+        if (currentCluster != &firstCluster)
+            free(currentCluster);
+        currentCluster = _isLastCluster(temp, fatFile_fp, info);
+    }
+
+    dirEntryArray[numDirEntries] = NULL;
+    return dirEntryArray;
+}
+
+//Calculates and returns a NULL terminated array of c-strings with the name of every dir entry in a cluster
+//Takes in the cluster number of the directory, the file pointer for the fat32 file, and the BPBInfo for the file
+//NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
+struct DIRENTRY** _getDirEntriesFromCluster(unsigned int clusterNum, int fatFile_fp, struct BPBInfo* info)
 {
     const unsigned int firstDataSector = info->RsvdSecCnt + (info->NumFATs * info->FATSize);
-    unsigned int *currentCluster = &firstCluster;
-    unsigned int byteOffset;
+    unsigned int *currentCluster = &clusterNum;
+    unsigned int byteOffset = (firstDataSector + ((*currentCluster - 2) * info->SecPerClus)) * info->BytesPerSec;;
     unsigned int offset;
     unsigned int entryByteOffset = 64;
     unsigned char byteBuff[4];
     unsigned char byte = 0;
-    unsigned int temp;
     unsigned char* tempChar;
 
-    unsigned int numDirNames = 0;
+    unsigned int numDirEntries = 0;
     struct DIRENTRY** dirEntryArray = (struct DIRENTRY**) malloc(sizeof(struct DIRENTRY*));
     struct DIRENTRY* tempDirEntry;
 
-    if (firstCluster != info->RootClus)
+    if (clusterNum != info->RootClus)
     {
         tempDirEntry = (struct DIRENTRY*) malloc(sizeof(struct DIRENTRY));
         strcpy(tempDirEntry->DIR_name, ".");
         tempDirEntry->DIR_Attributes = 0x10;
-        tempDirEntry->DIR_DataCluster = firstCluster;
+        tempDirEntry->DIR_DataCluster = clusterNum;
+        tempDirEntry->DIR_EntryByteOffset = byteOffset;
         dirEntryArray[0] = tempDirEntry;
-        numDirNames++;
+        numDirEntries++;
     }
     else
         dirEntryArray[0] = NULL;
 
-    while (currentCluster != NULL)
-    {
-        byteOffset = (firstDataSector + ((*currentCluster - 2) * info->SecPerClus)) * info->BytesPerSec;
-        offset = byteOffset + 32;
+    offset = byteOffset + 32;
 
+    while (offset - byteOffset < info->BytesPerSec * info->SecPerClus)
+    {
+        lseek(fatFile_fp, offset - 32, SEEK_SET);
         read(fatFile_fp, &byte, 1);
-        while (byte != 0 && offset - byteOffset < info->BytesPerSec * info->SecPerClus)
+        if (byte != 0xE5 && byte != 0)
         {
             lseek(fatFile_fp, offset, SEEK_SET);
-            tempDirEntry = (struct DIRENTRY*) malloc(sizeof(struct DIRENTRY));
+            tempDirEntry = (struct DIRENTRY *) malloc(sizeof(struct DIRENTRY));
             read(fatFile_fp, tempDirEntry->DIR_name, 11);
             tempDirEntry->DIR_name[11] = '\0';
 
@@ -121,6 +157,11 @@ struct DIRENTRY** _getDirEntriesFromFirstCluster(unsigned int firstCluster, int 
             lseek(fatFile_fp, offset + 11, SEEK_SET);
             read(fatFile_fp, &tempDirEntry->DIR_Attributes, 1);
 
+            if (!strcmp(tempDirEntry->DIR_name, ".."))
+                tempDirEntry->DIR_EntryByteOffset = offset;
+            else
+                tempDirEntry->DIR_EntryByteOffset = offset - 32;
+
             lseek(fatFile_fp, offset + 20, SEEK_SET);
             read(fatFile_fp, byteBuff, 2);
             lseek(fatFile_fp, offset + 26, SEEK_SET);
@@ -130,26 +171,38 @@ struct DIRENTRY** _getDirEntriesFromFirstCluster(unsigned int firstCluster, int 
             tempDirEntry->DIR_DataCluster |= byteBuff[3] << 8;
             tempDirEntry->DIR_DataCluster |= byteBuff[2];
 
-            dirEntryArray = (struct DIRENTRY**) realloc(dirEntryArray, sizeof(struct DIRENTRY*) * (numDirNames + 2));
-            dirEntryArray[numDirNames] = tempDirEntry;
-            numDirNames += 1;
+            lseek(fatFile_fp, offset + 28, SEEK_SET);
+            read(fatFile_fp, &tempDirEntry->DIR_fileSize, 4);
 
-            offset += entryByteOffset;
-            lseek(fatFile_fp, offset, SEEK_SET);
-            read(fatFile_fp, &byte, 1);
+            dirEntryArray = (struct DIRENTRY **) realloc(dirEntryArray,
+                                                         sizeof(struct DIRENTRY *) * (numDirEntries + 2));
+            dirEntryArray[numDirEntries] = tempDirEntry;
+            numDirEntries++;
         }
-        temp = *currentCluster;
-        if (currentCluster != &firstCluster)
-            free(currentCluster);
-        currentCluster = _isLastCluster(temp, fatFile_fp, info);
+
+        offset += entryByteOffset;
     }
 
-    dirEntryArray[numDirNames] = NULL;
+    dirEntryArray[numDirEntries] = NULL;
     return dirEntryArray;
+}
+
+//Sets a cluster as available
+//NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
+void _setClusterAsAvailable(unsigned int cluster, int fatFile_fp, struct BPBInfo* info)
+{
+    unsigned int offset = (info->RsvdSecCnt * info->BytesPerSec) + (cluster * 4);
+    unsigned char byteBuff[4];
+
+    memset(byteBuff, 0, 4);
+
+    lseek(fatFile_fp, offset, SEEK_SET);
+    write(fatFile_fp, byteBuff, 4);
 }
 
 //Determines if the passed cluster is the last one. Returns NULL if it is the last cluster, otherwise returns
 //a pointer to the next cluster number
+//NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
 unsigned int* _isLastCluster(unsigned int cluster, int fatFile_fp, struct BPBInfo* info)
 {
     unsigned char buff[4];
@@ -174,7 +227,24 @@ unsigned int* _isLastCluster(unsigned int cluster, int fatFile_fp, struct BPBInf
         return entry;
 }
 
-//deallocates a NULL TERMINATED array of direntries
+//Replaces the contents of a cluster with all 0s
+//NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
+void _removeClusterData(unsigned int cluster, int fatFile_fp, struct BPBInfo* info)
+{
+    const unsigned int firstDataSector = info->RsvdSecCnt + (info->NumFATs * info->FATSize);
+    unsigned int byteOffset;
+    unsigned char byteBuff[info->BytesPerSec * info->SecPerClus];
+
+    //initializes byte buffer to all 0's
+    memset(byteBuff, 0, info->BytesPerSec * info->SecPerClus);
+
+    byteOffset = (firstDataSector + ((cluster - 2) * info->SecPerClus)) * info->BytesPerSec;
+
+    lseek(fatFile_fp, byteOffset, SEEK_SET);
+    write(fatFile_fp, byteBuff, info->BytesPerSec * info->SecPerClus);
+}
+
+//Deallocates a NULL TERMINATED array of direntries
 void _freeDirEntryArray(struct DIRENTRY** entries)
 {
     for (int i = 0; entries[i] != NULL; i++)
