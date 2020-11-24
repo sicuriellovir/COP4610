@@ -51,7 +51,7 @@ void _removeFile(struct DIRENTRY* entry, int fatFile_fp, struct BPBInfo* info)
         temp = *currentCluster;
         if (currentCluster != &entry->DIR_DataCluster)
             free(currentCluster);
-        currentCluster = _isLastCluster(temp, fatFile_fp, info);
+        currentCluster = _getNextCluster(temp, fatFile_fp, info);
 
         _setClusterAsAvailable(temp, fatFile_fp, info);
     }

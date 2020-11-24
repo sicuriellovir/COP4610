@@ -99,7 +99,7 @@ struct DIRENTRY** _getDirEntriesFromAllClusters(unsigned int firstCluster, int f
         temp = *currentCluster;
         if (currentCluster != &firstCluster)
             free(currentCluster);
-        currentCluster = _isLastCluster(temp, fatFile_fp, info);
+        currentCluster = _getNextCluster(temp, fatFile_fp, info);
     }
 
     dirEntryArray[numDirEntries] = NULL;
@@ -111,9 +111,7 @@ struct DIRENTRY** _getDirEntriesFromAllClusters(unsigned int firstCluster, int f
 //NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
 struct DIRENTRY** _getDirEntriesFromCluster(unsigned int clusterNum, int fatFile_fp, struct BPBInfo* info)
 {
-    const unsigned int firstDataSector = info->RsvdSecCnt + (info->NumFATs * info->FATSize);
-    unsigned int *currentCluster = &clusterNum;
-    unsigned int byteOffset = (firstDataSector + ((*currentCluster - 2) * info->SecPerClus)) * info->BytesPerSec;;
+    unsigned int byteOffset = getByteOffsetFromCluster(clusterNum, info);
     unsigned int offset;
     unsigned int entryByteOffset = 64;
     unsigned char byteBuff[4];
@@ -207,10 +205,10 @@ void _setClusterAsAvailable(unsigned int cluster, int fatFile_fp, struct BPBInfo
     write(fatFile_fp, byteBuff, 4);
 }
 
-//Determines if the passed cluster is the last one. Returns NULL if it is the last cluster, otherwise returns
-//a pointer to the next cluster number
+//Calculates and returns the next cluster after the passed cluster or NULL if the passed
+//cluster was the last one
 //NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
-unsigned int* _isLastCluster(unsigned int cluster, int fatFile_fp, struct BPBInfo* info)
+unsigned int* _getNextCluster(unsigned int cluster, int fatFile_fp, struct BPBInfo* info)
 {
     unsigned char buff[4];
     unsigned int offset = (info->RsvdSecCnt * info->BytesPerSec) + (cluster * 4);
@@ -249,10 +247,28 @@ void _removeClusterData(unsigned int cluster, int fatFile_fp, struct BPBInfo* in
     write(fatFile_fp, byteBuff, info->BytesPerSec * info->SecPerClus);
 }
 
+//gets the byte offset of the passed cluster
+unsigned int getByteOffsetFromCluster(unsigned int cluster, struct BPBInfo* info)
+{
+    const unsigned int firstDataSector = info->RsvdSecCnt + (info->NumFATs * info->FATSize);
+    return (firstDataSector + ((cluster - 2) * info->SecPerClus)) * info->BytesPerSec;
+}
+
 //Deallocates a NULL TERMINATED array of direntries
 void _freeDirEntryArray(struct DIRENTRY** entries)
 {
     for (int i = 0; entries[i] != NULL; i++)
         free(entries[i]);
     free(entries);
+}
+
+//Deallocates a NULL TERMINATED array of openFiles
+void _freeOpenFileArray(struct openFile** files)
+{
+    for (int i = 0; files[i] != NULL; i++)
+    {
+        free(files[i]->entry);
+        free(files[i]);
+    }
+    free(files);
 }

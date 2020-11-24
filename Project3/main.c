@@ -5,6 +5,8 @@
 #include "ls.h"
 #include "cd.h"
 #include "rm.h"
+#include "lseek.h"
+#include "read.h"
 
 char** getTokens(char* str);
 void freeTokenArray(char** tokenArray);
@@ -18,6 +20,11 @@ int main() {
     unsigned int pwdStartCluster;
     //file pointer for the FAT32 image file
     int imgFile;
+    //NULL TERMINATED array of openFiles to keep track of the files that are open and an int
+    //to keep track of the number of open files
+    struct openFile** openFiles = (struct openFile**) malloc(sizeof(struct openFile*));
+    unsigned int numOpenFiles = 0;
+    openFiles[0] = NULL;
 
     printf("Enter image filename (up to 50 chars): ");
 
@@ -37,6 +44,20 @@ int main() {
     struct BPBInfo fileInfo;
     BPBInfoInit(&fileInfo, imgFile);
     pwdStartCluster = fileInfo.RootClus;
+
+    struct openFile* temp;
+    struct DIRENTRY** entries = _getDirEntriesFromAllClusters(pwdStartCluster, imgFile, &fileInfo);
+    for (int i = 0; entries[i] != NULL; i++)
+    {
+        temp = (struct openFile*) malloc(sizeof(struct openFile));
+        temp->entry = entries[i];
+        temp->lseekOffset = 0;
+        temp->mode = i % 3;
+        openFiles = (struct openFile**) realloc(openFiles, sizeof(struct openFile*) * (numOpenFiles + 2));
+        openFiles[i] = temp;
+        numOpenFiles++;
+    }
+    openFiles[numOpenFiles] = NULL;
 
     char** tokenArray;
 
@@ -90,12 +111,10 @@ int main() {
         }
         else if (!strcmp(tokenArray[0], "lseek"))
         {
-            //call lseek
+            setLseek(openFiles, tokenArray[1], atoi(tokenArray[2]));
         }
         else if (!strcmp(tokenArray[0], "read"))
-        {
-            //call read
-        }
+            readFile(openFiles, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "write"))
         {
             //call write
@@ -112,6 +131,7 @@ int main() {
         freeTokenArray(tokenArray);
     }
 
+    _freeOpenFileArray(openFiles);
     close(imgFile);
     return 0;
 }
