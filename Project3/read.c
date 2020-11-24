@@ -15,7 +15,7 @@ void readFile(struct openFile** files, char* fileName, unsigned int size, int fa
     unsigned char* byteBuff;
 
     for (int i = 0; files[i] != NULL && temp == NULL; i++) {
-        if (strcmp(fileName, files[i]->entry->DIR_name) == 0)
+        if (!strcasecmp(fileName, files[i]->entry->DIR_name))
             temp = files[i];
     }
 
@@ -55,7 +55,7 @@ void readFile(struct openFile** files, char* fileName, unsigned int size, int fa
     byteBuff = (unsigned char*) malloc(sizeof(char) * (size + 1));
     offset = getByteOffsetFromCluster(*currentCluster, info) + (temp->lseekOffset % bytesPerClus);
     lseek(fatFile_fp, offset, SEEK_SET);
-    if (size + (temp->lseekOffset % bytesPerClus) < bytesPerClus)
+    if (size < bytesPerClus - (temp->lseekOffset % bytesPerClus))
     {
         read(fatFile_fp, byteBuff, size);
         bytesRead += size;
@@ -88,5 +88,8 @@ void readFile(struct openFile** files, char* fileName, unsigned int size, int fa
     }
     byteBuff[size] = '\0';
 
-    printf("%s\n", byteBuff);
+    temp->lseekOffset += size;
+
+    if (size != 0)
+        printf("%s\n", byteBuff);
 }

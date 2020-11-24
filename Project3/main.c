@@ -36,7 +36,7 @@ int main() {
     imgFile = open(filename, O_RDWR);
     if (imgFile == -1)
     {
-        printf("Error: Could not open file %s", filename);
+        printf("Error: Could not open file %s\n", filename);
         close(imgFile);
         return 0;
     }
@@ -44,20 +44,6 @@ int main() {
     struct BPBInfo fileInfo;
     BPBInfoInit(&fileInfo, imgFile);
     pwdStartCluster = fileInfo.RootClus;
-
-    struct openFile* temp;
-    struct DIRENTRY** entries = _getDirEntriesFromAllClusters(pwdStartCluster, imgFile, &fileInfo);
-    for (int i = 0; entries[i] != NULL; i++)
-    {
-        temp = (struct openFile*) malloc(sizeof(struct openFile));
-        temp->entry = entries[i];
-        temp->lseekOffset = 0;
-        temp->mode = i % 3;
-        openFiles = (struct openFile**) realloc(openFiles, sizeof(struct openFile*) * (numOpenFiles + 2));
-        openFiles[i] = temp;
-        numOpenFiles++;
-    }
-    openFiles[numOpenFiles] = NULL;
 
     char** tokenArray;
 

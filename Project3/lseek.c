@@ -9,7 +9,7 @@ void setLseek(struct openFile** files, char* fileName, unsigned int offset)
 
     for (int i = 0; files[i] != NULL && temp == NULL; i++)
     {
-        if (strcmp(fileName, files[i]->entry->DIR_name) == 0)
+        if (!strcasecmp(fileName, files[i]->entry->DIR_name))
             temp = files[i];
     }
 
@@ -20,7 +20,7 @@ void setLseek(struct openFile** files, char* fileName, unsigned int offset)
     }
 
     if (offset > temp->entry->DIR_fileSize)
-        printf("Error: %d is larger than the size of file %s. The size of this file is %d\n",
+        printf("Error: %d is larger than the size of file %s. The size of this file is %d bytes\n",
                 offset, temp->entry->DIR_name, temp->entry->DIR_fileSize);
     else
         temp->lseekOffset = offset;
