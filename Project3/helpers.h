@@ -19,6 +19,8 @@ struct DIRENTRY {
     unsigned int DIR_DataCluster;
     unsigned int DIR_EntryByteOffset;
     unsigned int DIR_fileSize;
+    unsigned short DIR_FstClusHI;   
+    unsigned short DIR_FstClusLO;
 } __attribute__((packed));
 
 //these are the different modes a file can be opened in
@@ -40,5 +42,6 @@ void _removeClusterData(unsigned int cluster, int fatFile_fp, struct BPBInfo* in
 void _freeDirEntryArray(struct DIRENTRY** entries);
 void _freeOpenFileArray(struct openFile** files);
 unsigned int getByteOffsetFromCluster(unsigned int cluster, struct BPBInfo* info);
+int nextEmptyClus(int image, struct BPBInfo* info);
 
 #endif
