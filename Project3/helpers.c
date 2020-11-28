@@ -272,3 +272,16 @@ void _freeOpenFileArray(struct openFile** files)
     }
     free(files);
 }
+
+int nextEmptyClus(int image, struct BPBInfo* info)
+{
+    unsigned int tempClus = info->RootClus;
+    unsigned int clusValue;
+    
+    do{
+        tempClus++;
+        pread(image, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
+    }while(clusValue != 0);  
+    
+    return tempClus;   
+}
