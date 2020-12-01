@@ -1,62 +1,94 @@
 #include "mkdirr.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 void mkdirr(unsigned int pwdStartCluster, char* dirName, int fatFile_fp, struct BPBInfo* info)
 {
     struct DIRENTRY dirEntryArray;
-    unsigned int eofValue = 0x0FFFFFF8;
-    unsigned int tempCluster;
-    int FAT = info->BytesPerSec * ((info->NumFATs * info->FATSize) + info->RsvdSecCnt);
+    int tempCluster = pwdStartCluster;
+    int i = 0;
+    int nCluster;
+    int ifspace;
+    int atOffset;
 
-
-    tempCluster = nextEmptyClus(fatFile_fp, info);
-
-    write(fatFile_fp, &eofValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempCluster * 4);
-
-    int i;
-    for(i = 0; i < strlen(dirName); i++)
-        dirEntryArray.DIR_name[i] = dirName[i];
-    
-
-    for(i = strlen(dirName); i < 8; i++)
-        dirEntryArray.DIR_name[i] = 32;
-    
-
-    unsigned int byteOffSet;
-    dirEntryArray.DIR_FstClusLO = 0xFFFF & tempCluster;
-    dirEntryArray.DIR_FstClusHI = (tempCluster >> 16) & 0xFFFF;
-    dirEntryArray.DIR_Attributes = 0;
-    dirEntryArray.DIR_fileSize = 0;
-    dirEntryArray.DIR_EntryByteOffset = 0;
-
-    byteOffSet = info->BytesPerSec * (FAT + ( pwdStartCluster - 2) * info->SecPerClus);
-
-    struct DIRENTRY temp;
-
-    while(1)
+    while (true)
     {
-        read(fatFile_fp, &temp, sizeof(temp), byteOffSet);
-        if(temp.DIR_name[0] == 0)
+        ifspace = 0;
+        i = 0;
+        for (;i*sizeof(dirEntryArray) < info->BytesPerSec;i++)
         {
-            write(fatFile_fp, &dirEntryArray, sizeof(dirEntryArray), byteOffSet);
+            int offset = getByteOffsetFromCluster(pwdStartCluster,info) + i*sizeof(dirEntryArray);
+
+            lseek(fatFile_fp, offset, SEEK_SET);
+            pread(&dirEntryArray, sizeof(struct DIRENTRY), 1, fatFile_fp);
+
+            if (dirEntryArray.DIR_name[0] == 0xE5 || dirEntryArray.DIR_name[0] == 0x00)
+            {
+                ifspace = 1;
+                atOffset = offset;
+                break;
+            }
+        }
+
+        if(ifspace == 1)
+            break;
+
+        lseek(fatFile_fp, 0x4000 + (4*pwdStartCluster), SEEK_SET);
+        pread(&nCluster, sizeof(int), 1, fatFile_fp);
+
+        if (nCluster != 0x0FFFFFF8 && nCluster != 0x0FFFFFFF && nCluster != 0x00000000)
+            pwdStartCluster = nCluster;
+        else
+        {
+            ifspace = 0;
             break;
         }
-        byteOffSet = byteOffSet + 32;
     }
 
+    if(ifspace == 1)
+    {
+        struct DIRENTRY temp;
 
-    struct DIRENTRY parentDirEntry;
+        strcpy(temp.DIR_name, dirName);
+        temp.DIR_Attributes = 0x10;
 
-    strncpy(parentDirEntry.DIR_name, "..         ", 11);
-    parentDirEntry.DIR_FstClusLO = 0xFFFF & pwdStartCluster;
-    parentDirEntry.DIR_FstClusHI = (pwdStartCluster >> 16) & 0xFFFF;
-    parentDirEntry.DIR_Attributes = 0x10;
-    parentDirEntry.DIR_fileSize = 0;
-    byteOffSet = info->BytesPerSec * (FAT + (tempCluster - 2) * info->SecPerClus);
-    write(fatFile_fp, &parentDirEntry, sizeof(parentDirEntry), byteOffSet);
+        temp.DIR_fileSize = 0;
 
-    strncpy(dirEntryArray.DIR_name, ".          ", 11);
-    write(fatFile_fp, &dirEntryArray, sizeof(dirEntryArray), byteOffSet + 32);
+        int empty = nextEmptyClus(fatFile_fp, info);
+        temp.DIR_FstClusHI = empty / 0x100;
+        temp.DIR_FstClusLO = empty % 0x100;
 
+        lseek(fatFile_fp, atOffset, SEEK_SET);
+        pwrite(&temp, 1, sizeof(struct DIRENTRY), fatFile_fp);
+    }
+    else
+    {
+        struct DIRENTRY addDir;
+        int t = nextEmptyClus(fatFile_fp, info);
+
+        int rootDir = 0x0FFFFFF8;
+
+        if(t != -1)
+        {
+            lseek(fatFile_fp, 0x4000 + (4 * t), SEEK_SET);
+            pwrite(&rootDir, 1, sizeof(int), fatFile_fp);
+
+            lseek(fatFile_fp, 0x4000 + (4 * tempCluster), SEEK_SET);
+            pwrite(&t, 1, sizeof(int), fatFile_fp);
+
+            int newOffset = getByteOffsetFromCluster(t, info);
+
+            strcpy(addDir.DIR_name, dirName);
+            addDir.DIR_Attributes = 0x10;
+            addDir.DIR_fileSize = 0;
+
+            int newEmpty = nextEmptyClus(fatFile_fp, info);
+            addDir.DIR_FstClusHI = newEmpty / 0x100;
+            addDir.DIR_FstClusLO = newEmpty % 0x100;
+
+            lseek(fatFile_fp, newOffset, SEEK_SET);
+            pwrite(&addDir, 1, sizeof(struct DIRENTRY), fatFile_fp);
+        }
+    }
 }
