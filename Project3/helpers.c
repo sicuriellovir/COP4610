@@ -286,37 +286,3 @@ int nextEmptyClus(int image, struct BPBInfo* info)
     
     return tempClus;   
 }
-
-void addFile(int image, char *fileName, char *fileMode,     struct FileFAT* head, struct FileFAT* ptr)
-{
-    int size = sizeof(struct FileFAT);
-    struct FileFAT *ptrTemp = calloc(1, size);
-    strcpy(ptrTemp->fileName, fileName);
-    strcpy(ptrTemp->fileMode, fileMode);
-    ptrTemp->next = NULL;
-    
-    if(head == NULL){
-        head = ptrTemp;
-        ptrTemp->previous = head;
-    }
-    else {
-        struct FileFAT *ptr = head;
-        while(ptr->next != NULL){
-            ptr->previous = ptr;
-            ptr = ptr->next;
-        }
-        ptr->next = ptrTemp;
-    }
-}
-
-int OpenFile(char *file_name, struct FileFAT* head)
-{
-    struct FileFAT *ptr;
-
-        for(ptr = head; ptr !=NULL; ptr = ptr->next)
-        {
-            if(strncmp(ptr->fileName, file_name,11) == 0)            
-                return 1;
-        }
-        return 0;
-}
