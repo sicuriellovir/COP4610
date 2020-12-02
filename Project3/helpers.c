@@ -280,7 +280,8 @@ int nextEmptyClus(int image, struct BPBInfo* info)
     
     do{
         tempClus++;
-        pread(image, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
+        lseek(image, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4, SEEK_SET);
+        read(image, &clusValue, 4);
     }while(clusValue != 0);  
     
     return tempClus;   
