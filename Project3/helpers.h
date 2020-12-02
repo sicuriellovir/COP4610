@@ -12,6 +12,14 @@ struct BPBInfo {
     unsigned int TotSec;
 };
 
+struct FileFAT {
+int cluster;
+char fileName[50];
+char fileMode[10];
+struct FileFAT *next;
+struct FileFAT *previous;
+ };
+
 //holds data corresponding to a directory entry
 struct DIRENTRY {
     unsigned char DIR_name[12];
@@ -43,5 +51,8 @@ void _freeDirEntryArray(struct DIRENTRY** entries);
 void _freeOpenFileArray(struct openFile** files);
 unsigned int getByteOffsetFromCluster(unsigned int cluster, struct BPBInfo* info);
 int nextEmptyClus(int image, struct BPBInfo* info);
+void addFile(int image, char *fileName, char *fileMode, struct FileFAT* head, struct FileFAT* ptr);
+int OpenFile(char *file_name, struct FileFAT* head);
+
 
 #endif
