@@ -66,17 +66,11 @@ int main() {
 
         if (tokenArray[0] == NULL) {}
         else if (!strcmp(tokenArray[0], "exit"))
-        {
-            //call exit
-        }
+            exitAllPrograms(tokenArray[1]);
         else if (!strcmp(tokenArray[0], "info"))
-        {
-            //call info
-        }
+            printInfo(&fileInfo);
         else if (!strcmp(tokenArray[0], "size"))
-        {
-            //call size
-        }
+            printSize(filename);
         else if (!strcmp(tokenArray[0], "ls"))
             ls(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "cd"))
