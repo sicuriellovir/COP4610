@@ -284,7 +284,7 @@ int nextEmptyClus(int fatFile_fp, struct BPBInfo* info)
     
     do{
         tempClus++;
-        //pread(fatFile_fp, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
+        pread(fatFile_fp, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
 
     }while(clusValue != 0);
     
@@ -307,7 +307,7 @@ void createEmptyDirEntry(int fatFile_fp, unsigned int offSet){
     temp.DIR_DataCluster = 0;
     temp.DIR_EntryByteOffset = 0;
     
-    //pwrite(fatFile_fp, &temp, 32, offSet);
+    pwrite(fatFile_fp, &temp, 32, offSet);
 }
 
 void addFile(struct openFile* head, struct openFile* ptr)
