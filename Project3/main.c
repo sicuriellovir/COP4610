@@ -9,14 +9,11 @@
 #include "read.h"
 #include "creatt.h"
 #include "mkdirr.h"
-#include "mv.h"
 #include "cmdopen.h"
 #include "cmdclose.h"
 
 char** getTokens(char* str);
 void freeTokenArray(char** tokenArray);
-struct openFile *head = NULL; 
-struct openFile *ptr;
 
 int main() {
     //character buffer for the FAT32 filename
@@ -27,11 +24,13 @@ int main() {
     unsigned int pwdStartCluster;
     //file pointer for the FAT32 image file
     int imgFile;
-    //NULL TERMINATED array of openFiles to keep track of the files that are open and an int
-    //to keep track of the number of open files
-    struct openFile** openFiles = (struct openFile**) malloc(sizeof(struct openFile*));
-    unsigned int numOpenFiles = 0;
-    openFiles[0] = NULL;
+    //head for openFile linked list
+    struct openFile *head = (struct openFile*) malloc(sizeof(struct openFile));
+    head->entry = (struct DIRENTRY*) malloc(sizeof(struct DIRENTRY));
+    head->entry->DIR_name[0] = '\0';
+    head->next = head->previous = NULL;
+
+    struct openFile* ptr;
 
     printf("Enter image filename (up to 50 chars): ");
 
@@ -86,16 +85,17 @@ int main() {
             creatt(&pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "mkdir"))
             mkdirr(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
-        else if (!strcmp(tokenArray[0], "mv"))
-            mv(&pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo);
+        else if (!strcmp(tokenArray[0], "mv")) {
+            //mv(&pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo);
+        }
         else if (!strcmp(tokenArray[0], "open"))
-            cmdopen(pwdStartCluster, tokenArray[1], tokenArray[2],  imgFile, &fileInfo, head, ptr);
+            cmdopen(pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo, head);
         else if (!strcmp(tokenArray[0], "close"))
             cmdclose(pwdStartCluster, tokenArray[1], imgFile, &fileInfo, head, ptr);
         else if (!strcmp(tokenArray[0], "lseek"))
-            setLseek(openFiles, tokenArray[1], atoi(tokenArray[2]));
+            setLseek(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]));
         else if (!strcmp(tokenArray[0], "read"))
-            readFile(openFiles, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
+            readFile(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "write"))
         {
             //call write
@@ -112,7 +112,7 @@ int main() {
         freeTokenArray(tokenArray);
     }
 
-    _freeOpenFileArray(openFiles);
+    _freeOpenFileLL(head);
     close(imgFile);
     return 0;
 }

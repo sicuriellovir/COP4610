@@ -3,14 +3,13 @@
 #include <string.h>
 
 //sets the lseekOffset of the passed openFile to offset if the offset is <= the size of the file and the file is open
-void setLseek(struct openFile** files, char* fileName, unsigned int offset)
+void setLseek(unsigned int pwdStartCluster, struct openFile* files, char* fileName, unsigned int offset)
 {
     struct openFile* temp = NULL;
 
-    for (int i = 0; files[i] != NULL && temp == NULL; i++)
-    {
-        if (!strcasecmp(fileName, files[i]->entry->DIR_name))
-            temp = files[i];
+    for (struct openFile* i = files; i != NULL && temp == NULL; i = i->next) {
+        if (!strcasecmp(fileName, i->entry->DIR_name))
+            temp = i;
     }
 
     if (temp == NULL)

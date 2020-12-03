@@ -262,15 +262,18 @@ void _freeDirEntryArray(struct DIRENTRY** entries)
     free(entries);
 }
 
-//Deallocates a NULL TERMINATED array of openFiles
-void _freeOpenFileArray(struct openFile** files)
+//Deallocates a linked list
+void _freeOpenFileLL(struct openFile* files)
 {
-    for (int i = 0; files[i] != NULL; i++)
+    struct openFile* i = files;
+    struct openFile* temp;
+    while (i != NULL)
     {
-        free(files[i]->entry);
-        free(files[i]);
+        temp = i->next;
+        free(i->entry);
+        free(i);
+        i = temp;
     }
-    free(files);
 }
 
 int nextEmptyClus(int fatFile_fp, struct BPBInfo* info)
@@ -281,7 +284,7 @@ int nextEmptyClus(int fatFile_fp, struct BPBInfo* info)
     
     do{
         tempClus++;
-        pread(fatFile_fp, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
+        //pread(fatFile_fp, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
 
     }while(clusValue != 0);
     
@@ -304,38 +307,37 @@ void createEmptyDirEntry(int fatFile_fp, unsigned int offSet){
     temp.DIR_DataCluster = 0;
     temp.DIR_EntryByteOffset = 0;
     
-    pwrite(fatFile_fp, &temp, 32, offSet);
+    //pwrite(fatFile_fp, &temp, 32, offSet);
 }
 
-void addFile(int image, char *fileName, char *fileMode, struct openFile* head, struct openFile* ptr)
+void addFile(struct openFile* head, struct openFile* ptr)
 {
-    int size = sizeof(struct openFile);
-    struct openFile *ptrTemp = calloc(1, size);
-    strcpy(ptrTemp->entry->DIR_name, fileName);
-    strcpy(ptrTemp->mode, fileMode);
-    ptrTemp->next = NULL;
-    
-    if(head == NULL){
-        head = ptrTemp;
-        ptrTemp->previous = head;
+    if (!strcmp(head->entry->DIR_name, ""))
+    {
+        memcpy(head->entry, ptr->entry, sizeof(struct DIRENTRY));
+        head->mode = ptr->mode;
+        head->lseekOffset = 0;
+        return;
     }
-    else {
-        struct openFile *ptr = head;
-        while(ptr->next != NULL){
-            ptr->previous = ptr;
-            ptr = ptr->next;
-        }
-        ptr->next = ptrTemp;
-    }
+
+    struct openFile* temp = (struct openFile*) malloc(sizeof(struct openFile));
+    temp->entry = (struct DIRENTRY*) malloc(sizeof(struct DIRENTRY));
+    struct openFile *i = head;
+    while(i->next != NULL)
+        i = i->next;
+    memcpy(temp->entry, ptr->entry, sizeof(struct DIRENTRY));
+    temp->mode = ptr->mode;
+    temp->lseekOffset = 0;
+    temp->previous = i;
+    temp->next = NULL;
+    i->next = temp;
 }
 
-int OpenFile(char *file_name, struct openFile* head)
+int OpenFile(struct DIRENTRY* entry, struct openFile* head)
 {
-    struct openFile *ptr;
-
-        for(ptr = head; ptr !=NULL; ptr = ptr->next)
+        for(struct openFile* ptr = head; ptr != NULL; ptr = ptr->next)
         {
-            if(strncmp(ptr->entry->DIR_name, file_name,11) == 0)            
+            if(!strcasecmp(ptr->entry->DIR_name, entry->DIR_name) && ptr->entry->DIR_DataCluster == entry->DIR_DataCluster)
                 return 1;
         }
         return 0;

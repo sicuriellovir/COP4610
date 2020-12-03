@@ -1,52 +1,36 @@
 #include "cmdopen.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-void cmdopen(unsigned int pwdStartCluster, char* dirName, char *mode, int fatFile_fp, struct BPBInfo* info, struct openFile* head, struct openFile* ptr)
+void cmdopen(unsigned int pwdStartCluster, char* dirName, char *mode, int fatFile_fp, struct BPBInfo* info, struct openFile* head)
 {
-    struct DIRENTRY tempDir;
-    unsigned int tempCluster = pwdStartCluster;
-    unsigned int byteOffSet;
-    char* space = " ";
-    int i;
-    int FAT = info->RsvdSecCnt + (info->NumFATs * info->FATSize);
+    struct DIRENTRY** pwdEntries = _getDirEntriesFromAllClusters(pwdStartCluster, fatFile_fp, info);
+    struct openFile* tempFile = NULL;
 
-    for(i = strlen(dirName); i < 11; i++)
-        strcat(dirName, space);
-
-
-    if (strcmp(mode, "w") == 0 || strcmp(mode, "r") == 0 || strcmp(mode, "wr") == 0 || strcmp(mode, "rw") == 0)
+    for (int i = 0; pwdEntries[i] != NULL; i++)
     {
-        if (!(OpenFile(dirName, head) == 1))
+        if (!strcasecmp(pwdEntries[i], dirName) && !OpenFile(pwdEntries[i], head))
         {
-            while (tempCluster < 0x0FFFFFF8)
-            {
-                byteOffSet = info->BytesPerSec * (FAT + (tempCluster - 2) * info->SecPerClus);
-                do
-                {
-                    pread(fatFile_fp, &tempDir, sizeof(struct DIRENTRY), byteOffSet);
-                    if (tempDir.DIR_Attributes != 15)
-                    {
-                        if (strncmp(tempDir.DIR_name, dirName, 11) == 0)
-                        {
-
-                            if (!(tempDir.DIR_Attributes & 0x10))
-                            {
-                                printf("File opened in %s mode \n", mode);
-                                addFile(fatFile_fp, dirName, mode, head, ptr);
-                            }
-                            else 
-                                printf("Error opening directory\n");
-                            return;
-                        }
-                    }
-                    byteOffSet = byteOffSet + 32;
-                } while (tempDir.DIR_name[0] != 0);
-                
-                pread(fatFile_fp, &tempCluster, 4, info->RsvdSecCnt * info->BytesPerSec + tempCluster * 4);
-
-            }
-            printf("File not found\n");
-        } 
+            tempFile = (struct openFile *) malloc(sizeof(struct openFile));
+            tempFile->entry = pwdEntries[i];
+        }
     }
+
+    if (tempFile == NULL)
+    {
+        printf("Error: %s was either not found in the current directory or is already open\n", dirName);
+        return;
+    }
+
+    if (!strcmp(mode, "r"))
+        tempFile->mode = READONLY;
+    else if (!strcmp(mode, "w"))
+        tempFile->mode = WRITEONLY;
+    else if (!strcmp(mode, "rw") || !strcmp(mode, "wr"))
+        tempFile->mode = READANDWRITE;
+
+    addFile(head, tempFile);
+    _freeDirEntryArray(pwdEntries);
+    free(tempFile);
 }

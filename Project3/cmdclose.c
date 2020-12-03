@@ -1,5 +1,6 @@
 #include "cmdclose.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 void cmdclose(unsigned int pwdStartCluster, char* dirName, int fatFile_fp, struct BPBInfo* info, struct openFile *head, struct openFile *ptr)
@@ -8,7 +9,7 @@ void cmdclose(unsigned int pwdStartCluster, char* dirName, int fatFile_fp, struc
     int i;
     for(i = strlen(dirName); i < 11; i++)
         strcat(dirName, " ");
-    
+
 
     if(OpenFile(dirName, head) == 0)
         printf("File not found.\n");
@@ -18,7 +19,7 @@ void cmdclose(unsigned int pwdStartCluster, char* dirName, int fatFile_fp, struc
         {
             if (strncmp(ptr->entry->DIR_name, dirName, 11) != 0)
                 continue;
-            if(secondPtr != NULL) 
+            if(secondPtr != NULL)
                 secondPtr->next = ptr->next;
             free(ptr);
             printf("File Closed\n");

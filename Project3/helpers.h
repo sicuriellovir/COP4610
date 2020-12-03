@@ -42,11 +42,11 @@ unsigned int* _getNextCluster(unsigned int cluster, int fatFile_fp, struct BPBIn
 void _setClusterAsAvailable(unsigned int cluster, int fatFile_fp, struct BPBInfo* info);
 void _removeClusterData(unsigned int cluster, int fatFile_fp, struct BPBInfo* info);
 void _freeDirEntryArray(struct DIRENTRY** entries);
-void _freeOpenFileArray(struct openFile** files);
+void _freeOpenFileLL(struct openFile* files);
 unsigned int getByteOffsetFromCluster(unsigned int cluster, struct BPBInfo* info);
 int nextEmptyClus(int fatFile_fp, struct BPBInfo* info);
 void createEmptyDirEntry(int fatFile_fp, unsigned int offSet);
-void addFile(int image, char *fileName, char *fileMode, struct openFile* head, struct openFile* ptr);
-int OpenFile(char *file_name, struct openFile* head);
+void addFile(struct openFile* head, struct openFile* ptr);
+int OpenFile(struct DIRENTRY* entry, struct openFile* head);
 
 #endif

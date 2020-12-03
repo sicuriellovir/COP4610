@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-void readFile(struct openFile** files, char* fileName, unsigned int size, int fatFile_fp, struct BPBInfo* info) {
+void readFile(unsigned int pwdStartCluster, struct openFile* files, char* fileName, unsigned int size, int fatFile_fp, struct BPBInfo* info) {
     struct openFile *temp = NULL;
     unsigned int bytesPerClus = info->BytesPerSec * info->SecPerClus;
     unsigned int clusterNumInChain;
@@ -14,16 +14,24 @@ void readFile(struct openFile** files, char* fileName, unsigned int size, int fa
     unsigned int bytesRead = 0;
     unsigned char* byteBuff;
 
-    for (int i = 0; files[i] != NULL && temp == NULL; i++) {
-        if (!strcasecmp(fileName, files[i]->entry->DIR_name))
-            temp = files[i];
+    struct DIRENTRY** pwdEntries = _getDirEntriesFromAllClusters(pwdStartCluster, fatFile_fp, info);
+    for (int i1 = 0; pwdEntries[i1] != NULL; i1++)
+    {
+        if (!strcasecmp(fileName, pwdEntries[i1]) && OpenFile(pwdEntries[i1], files))
+        {
+            for (struct openFile* i2 = files; i2 != NULL && temp == NULL; i2 = i2->next) {
+                if (!strcasecmp(fileName, i2->entry->DIR_name))
+                    temp = i2;
+            }
+        }
     }
 
-    //error checking
-    if (temp == NULL) {
-        printf("Error: %s is not an open file\n", fileName);
+    if (temp == NULL)
+    {
+        printf("Error: %s was either not found in the current directory or is not open\n", fileName);
         return;
     }
+
     else if (temp->entry->DIR_Attributes != 0x20) {
         printf("Error: %s is a directory, not a file\n", temp->entry->DIR_name);
         return;
