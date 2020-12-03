@@ -3,5 +3,5 @@
 
 #include "helpers.h"
 
-void exitAllPrograms( void ** ptr);
+void exitAllPrograms(struct openFile* head, int fatFile_fp);
 #endif

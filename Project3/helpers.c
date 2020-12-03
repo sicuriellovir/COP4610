@@ -284,7 +284,7 @@ int nextEmptyClus(int fatFile_fp, struct BPBInfo* info)
     
     do{
         tempClus++;
-        pread(fatFile_fp, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
+        //pread(fatFile_fp, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
 
     }while(clusValue != 0);
     
@@ -307,7 +307,7 @@ void createEmptyDirEntry(int fatFile_fp, unsigned int offSet){
     temp.DIR_DataCluster = 0;
     temp.DIR_EntryByteOffset = 0;
     
-    pwrite(fatFile_fp, &temp, 32, offSet);
+    //pwrite(fatFile_fp, &temp, 32, offSet);
 }
 
 void addFile(struct openFile* head, struct openFile* ptr)
@@ -345,22 +345,31 @@ int OpenFile(struct DIRENTRY* entry, struct openFile* head)
 
 int Remove(struct DIRENTRY* entry, struct openFile* head)
 {
-    struct openFile* itr1;
-    struct openFile* itr2 = NULL;
-    for (itr1 = head; itr1 != NULL; itr2 = itr1, itr1 = itr1->next) 
+    for (struct openFile* temp = head; temp != NULL; temp = temp->next)
     {
-        if (strcmp(itr1->entry->DIR_name, entry->DIR_name) == 0) 
+        if (!strcasecmp(temp->entry->DIR_name, entry->DIR_name) && temp->entry->DIR_DataCluster == entry->DIR_DataCluster)
         {
-            if (itr2 == NULL) 
-                head = itr1->next;
-    
-            else {
-                itr2->next = itr1->next;
+            if (temp->previous == NULL && temp->next == NULL)
+                head->entry->DIR_name[0] = '\0';
+            else if (temp == head)
+            {
+                *head = *head->next;
+                free(head->previous->entry);
+                free(head->previous);
+                head->previous = NULL;
             }
-            free(itr1);
-            return 0;
+            else
+            {
+                temp->previous->next = temp->next;
+                if (temp->next != NULL)
+                    temp->next->previous = temp->previous;
+                free(temp->entry);
+                free(temp);
+            }
+            return 1;
         }
     }
+
+    printf("Error: %s is not open\n", entry->DIR_name);
+    return 0;
 }
-
-

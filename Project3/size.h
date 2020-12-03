@@ -3,5 +3,5 @@
 
 #include "helpers.h"
 
-void printSize(char* fileName);
+void printSize(char* fileName, unsigned int pwdStartCluster, int fatFile_fp, struct BPBInfo* info);
 #endif

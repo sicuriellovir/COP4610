@@ -11,6 +11,9 @@
 #include "mkdirr.h"
 #include "cmdopen.h"
 #include "cmdclose.h"
+#include "size.h"
+#include "exit.h"
+#include "info.h"
 
 char** getTokens(char* str);
 void freeTokenArray(char** tokenArray);
@@ -66,28 +69,29 @@ int main() {
 
         if (tokenArray[0] == NULL) {}
         else if (!strcmp(tokenArray[0], "exit"))
-            exitAllPrograms(tokenArray[1]);
+            exitAllPrograms(head, imgFile);
         else if (!strcmp(tokenArray[0], "info"))
             printInfo(&fileInfo);
         else if (!strcmp(tokenArray[0], "size"))
-            printSize(filename);
+            printSize(tokenArray[1], pwdStartCluster, imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "ls"))
             ls(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "cd"))
             cd(&pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "creat"))
-            creatt(&pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
+            creatt(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "mkdir"))
             mkdirr(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
-        else if (!strcmp(tokenArray[0], "mv")) {
-            //mv(&pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo);
+        else if (!strcmp(tokenArray[0], "mv"))
+        {
+            //call mv
         }
         else if (!strcmp(tokenArray[0], "open"))
             cmdopen(pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo, head);
         else if (!strcmp(tokenArray[0], "close"))
-            cmdclose(tokenArray[1], head);
+            cmdclose(tokenArray[1], head, pwdStartCluster, imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "lseek"))
-            setLseek(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]));
+            setLseek(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "read"))
             readFile(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "write"))
@@ -106,8 +110,6 @@ int main() {
         freeTokenArray(tokenArray);
     }
 
-    _freeOpenFileLL(head);
-    close(imgFile);
     return 0;
 }
 

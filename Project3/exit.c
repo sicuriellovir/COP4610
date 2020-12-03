@@ -1,20 +1,12 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <string.h>
 #include "exit.h"
 
-void exitAllPrograms( void ** ptr) // pass the any open pointer you want to deallocate ...
+//The only memory that needs to be freed in the current implementation is the openFile linked list. The file pointer
+//for the fat32 image also needs to be closed, so they are passed to this and dealt with appropriately
+void exitAllPrograms(struct openFile* head, int fatFile_fp)
 {
-	char *allocated = NULL;
-    if (ptr) 
-    {
-        allocated = *ptr;
-    }
-    if (allocated)
-    {
-        free(allocated);
-        *ptr = NULL;
-    }
+	_freeOpenFileLL(head);
+	close(fatFile_fp);
 	exit(0);
 }
