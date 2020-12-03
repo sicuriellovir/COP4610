@@ -48,5 +48,5 @@ int nextEmptyClus(int fatFile_fp, struct BPBInfo* info);
 void createEmptyDirEntry(int fatFile_fp, unsigned int offSet);
 void addFile(struct openFile* head, struct openFile* ptr);
 int OpenFile(struct DIRENTRY* entry, struct openFile* head);
-
+int Remove(struct DIRENTRY* entry, struct openFile* head);
 #endif
