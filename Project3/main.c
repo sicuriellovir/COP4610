@@ -9,9 +9,14 @@
 #include "read.h"
 #include "creatt.h"
 #include "mkdirr.h"
+#include "mv.h"
+#include "cmdopen.h"
+#include "cmdclose.h"
 
 char** getTokens(char* str);
 void freeTokenArray(char** tokenArray);
+struct openFile *head = NULL; 
+struct openFile *ptr;
 
 int main() {
     //character buffer for the FAT32 filename
@@ -47,20 +52,6 @@ int main() {
     BPBInfoInit(&fileInfo, imgFile);
     pwdStartCluster = fileInfo.RootClus;
 
-    struct openFile* temp;
-    struct DIRENTRY** entries = _getDirEntriesFromAllClusters(pwdStartCluster, imgFile, &fileInfo);
-    for (int i = 0; entries[i] != NULL; i++)
-    {
-        temp = (struct openFile*) malloc(sizeof(struct openFile));
-        temp->entry = entries[i];
-        temp->lseekOffset = 0;
-        temp->mode = READONLY;
-        openFiles = (struct openFile**) realloc(openFiles, sizeof(struct openFile*) * (numOpenFiles + 2));
-        openFiles[i] = temp;
-        numOpenFiles++;
-    }
-    openFiles[numOpenFiles] = NULL;
-
     char** tokenArray;
 
     while (strncmp(input, "exit", 1024) != 0)
@@ -92,25 +83,17 @@ int main() {
         else if (!strcmp(tokenArray[0], "cd"))
             cd(&pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "creat"))
-            creatt(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
+            creatt(&pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "mkdir"))
             mkdirr(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "mv"))
-        {
-            //call mv
-        }
+            mv(&pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "open"))
-        {
-            //call open
-        }
+            cmdopen(pwdStartCluster, tokenArray[1], tokenArray[2],  imgFile, &fileInfo, head, ptr);
         else if (!strcmp(tokenArray[0], "close"))
-        {
-            //call close
-        }
+            cmdclose(pwdStartCluster, tokenArray[1], imgFile, &fileInfo, head, ptr);
         else if (!strcmp(tokenArray[0], "lseek"))
-        {
             setLseek(openFiles, tokenArray[1], atoi(tokenArray[2]));
-        }
         else if (!strcmp(tokenArray[0], "read"))
             readFile(openFiles, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "write"))
