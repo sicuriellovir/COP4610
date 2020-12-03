@@ -16,5 +16,5 @@ void exitAllPrograms( void ** ptr) // pass the any open pointer you want to deal
         free(allocated);
         *ptr = NULL;
     }
-	exit();
+	exit(0);
 }
