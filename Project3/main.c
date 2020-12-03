@@ -85,7 +85,7 @@ int main() {
         else if (!strcmp(tokenArray[0], "open"))
             cmdopen(pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo, head);
         else if (!strcmp(tokenArray[0], "close"))
-            cmdclose(pwdStartCluster, tokenArray[1], imgFile, &fileInfo, head, ptr);
+            cmdclose(tokenArray[1], head);
         else if (!strcmp(tokenArray[0], "lseek"))
             setLseek(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]));
         else if (!strcmp(tokenArray[0], "read"))
