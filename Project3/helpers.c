@@ -273,16 +273,72 @@ void _freeOpenFileArray(struct openFile** files)
     free(files);
 }
 
-int nextEmptyClus(int image, struct BPBInfo* info)
+int nextEmptyClus(int fatFile_fp, struct BPBInfo* info)
 {
+    
     unsigned int tempClus = info->RootClus;
     unsigned int clusValue;
     
     do{
         tempClus++;
-        lseek(image, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4, SEEK_SET);
-        read(image, &clusValue, 4);
-    }while(clusValue != 0);  
+        pread(fatFile_fp, &clusValue, 4, info->RsvdSecCnt * info->BytesPerSec + tempClus * 4);
+
+    }while(clusValue != 0);
     
     return tempClus;   
 }
+
+void createEmptyDirEntry(int fatFile_fp, unsigned int offSet){
+    struct DIRENTRY temp;
+    
+    int i;
+    
+    for( i = 0; i < 11; i++){
+        temp.DIR_name[i] = 0;
+    }
+    
+    temp.DIR_Attributes = 0;
+    temp.DIR_FstClusHI = 0;
+    temp.DIR_FstClusLO = 0;
+    temp.DIR_fileSize = 0;
+    temp.DIR_DataCluster = 0;
+    temp.DIR_EntryByteOffset = 0;
+    
+    pwrite(fatFile_fp, &temp, 32, offSet);
+}
+
+void addFile(int image, char *fileName, char *fileMode, struct openFile* head, struct openFile* ptr)
+{
+    int size = sizeof(struct openFile);
+    struct openFile *ptrTemp = calloc(1, size);
+    strcpy(ptrTemp->entry->DIR_name, fileName);
+    strcpy(ptrTemp->mode, fileMode);
+    ptrTemp->next = NULL;
+    
+    if(head == NULL){
+        head = ptrTemp;
+        ptrTemp->previous = head;
+    }
+    else {
+        struct openFile *ptr = head;
+        while(ptr->next != NULL){
+            ptr->previous = ptr;
+            ptr = ptr->next;
+        }
+        ptr->next = ptrTemp;
+    }
+}
+
+int OpenFile(char *file_name, struct openFile* head)
+{
+    struct openFile *ptr;
+
+        for(ptr = head; ptr !=NULL; ptr = ptr->next)
+        {
+            if(strncmp(ptr->entry->DIR_name, file_name,11) == 0)            
+                return 1;
+        }
+        return 0;
+}
+
+
