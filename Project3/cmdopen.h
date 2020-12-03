@@ -3,5 +3,5 @@
 
 #include "helpers.h"
 
-void cmdopen(unsigned int pwdStartCluster, char* dirName, char *mode, int fatFile_fp, struct BPBInfo* info, struct FileFAT* head, struct FileFAT* ptr);
+void cmdopen(unsigned int pwdStartCluster, char* dirName, char *mode, int fatFile_fp, struct BPBInfo* info, struct openFile* head, struct openFile* ptr);
 #endif
