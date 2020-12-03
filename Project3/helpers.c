@@ -343,4 +343,24 @@ int OpenFile(struct DIRENTRY* entry, struct openFile* head)
         return 0;
 }
 
+int Remove(struct DIRENTRY* entry, struct openFile* head)
+{
+    struct openFile* itr1;
+    struct openFile* itr2 = NULL;
+    for (itr1 = head; itr1 != NULL; itr2 = itr1, itr1 = itr1->next) 
+    {
+        if (strcmp(itr1->entry->DIR_name, entry->DIR_name) == 0) 
+        {
+            if (itr2 == NULL) 
+                head = itr1->next;
+    
+            else {
+                itr2->next = itr1->next;
+            }
+            free(itr1);
+            return 0;
+        }
+    }
+}
+
 
