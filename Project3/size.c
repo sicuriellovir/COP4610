@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include "helpers.h"
+#include "size.h"
 
 void printSize(char* fileName)
 {
