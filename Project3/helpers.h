@@ -12,7 +12,6 @@ struct BPBInfo {
     unsigned int TotSec;
 };
 
-
 //holds data corresponding to a directory entry
 struct DIRENTRY {
     unsigned char DIR_name[12];
@@ -32,6 +31,8 @@ struct openFile {
     struct DIRENTRY* entry;
     unsigned int lseekOffset;
     enum fileMode mode;
+    struct openFile *next;
+    struct openFile *previous;
 };
 
 void BPBInfoInit(struct BPBInfo* info, int fatFile_fp);
@@ -43,8 +44,9 @@ void _removeClusterData(unsigned int cluster, int fatFile_fp, struct BPBInfo* in
 void _freeDirEntryArray(struct DIRENTRY** entries);
 void _freeOpenFileArray(struct openFile** files);
 unsigned int getByteOffsetFromCluster(unsigned int cluster, struct BPBInfo* info);
-int nextEmptyClus(int image, struct BPBInfo* info);
-
-
+int nextEmptyClus(int fatFile_fp, struct BPBInfo* info);
+void createEmptyDirEntry(int fatFile_fp, unsigned int offSet);
+void addFile(int image, char *fileName, char *fileMode, struct openFile* head, struct openFile* ptr);
+int OpenFile(char *file_name, struct openFile* head);
 
 #endif
