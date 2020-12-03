@@ -2,15 +2,15 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-#include "helpers.h"
+#include "info.h"
 
-void printInfo(BPBInfo* ptr)
+void printInfo(struct BPBInfo* ptr)
 {
-    printf ("Bytes per Sector  : %u", ptr->BytesPerSec);
-    printf ("Sectors per Cluster : %u", ptr->SecPerClus);
-    printf ("Reserved sector count : %u", ptr->RsvdSecCnt);
-    printf ("Number of Fats : %u", ptr->NumFATs);
-    printf ("Total Sectors  : %u", ptr->TotSec);
-    printf ("FAT Size  : %u", ptr->FATSize);
-    printf ("Root Cluster  : %u", ptr->RootClus);
+    printf ("Bytes per Sector  : %u \n", ptr->BytesPerSec);
+    printf ("Sectors per Cluster : %u \n", ptr->SecPerClus);
+    printf ("Reserved sector count : %u \n", ptr->RsvdSecCnt);
+    printf ("Number of Fats : %u \n", ptr->NumFATs);
+    printf ("Total Sectors  : %u \n", ptr->TotSec);
+    printf ("FAT Size  : %u \n", ptr->FATSize);
+    printf ("Root Cluster  : %u \n", ptr->RootClus);
 }
