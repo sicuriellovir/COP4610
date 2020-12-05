@@ -1,10 +1,8 @@
-#include "rm.h"
+#include "rmdirr.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-
-void _removeDir(struct DIRENTRY* entry, int fatFile_fp, struct BPBInfo* info);
 
 /*removes a file from the current directory and frees its data cluster(s). takes in the start
 cluster of the current directory, the file name to remove (if possible), the fat32 file pointer,
@@ -22,12 +20,19 @@ void rmdirr(unsigned int pwdStartCluster, char* fileName, int fatFile_fp, struct
     {
         if (!strcasecmp(fileName, dirEntryArray[i]->DIR_name))
         {
-            if (dirEntryArray[i]->DIR_Attributes == 0x10)
-                _removeDir(dirEntryArray[i], fatFile_fp, info);
+            if (dirEntryArray[i]->DIR_Attributes == 0x10) {
+                struct DIRENTRY** tempDirEntryArray = _getDirEntriesFromAllClusters(dirEntryArray[i]->DIR_DataCluster,
+                        fatFile_fp, info);
+                if (!strncmp(tempDirEntryArray[0]->DIR_name, ".", 1) && !strncmp(tempDirEntryArray[1]->DIR_name, "..", 2)
+                && tempDirEntryArray[2] == NULL)
+                    _removeDir(dirEntryArray[i], fatFile_fp, info);
+                else
+                    printf("Error: %s is not an empty directory\n", fileName);
+                _freeDirEntryArray(tempDirEntryArray);
+            }
             else
                 printf("Error: %s is a file, not a directory\n", fileName);
 
-            _freeDirEntryArray(dirEntryArray);
             return;
         }
     }

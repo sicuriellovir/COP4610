@@ -73,4 +73,7 @@ Known bugs and incomplete portions of the project:
 		- mv
 
 Fixed bugs:
+	- Fixed close function not removing from the openFile linked list properly
+	- Fixed open not detecting invalid modes
+	- Fixed ls not reading files from directories that span multiple clusters
 

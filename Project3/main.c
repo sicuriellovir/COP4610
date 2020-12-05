@@ -12,6 +12,7 @@
 #include "size.h"
 #include "exit.h"
 #include "info.h"
+#include "rmdirr.h"
 
 char** getTokens(char* str);
 void freeTokenArray(char** tokenArray);
@@ -78,11 +79,11 @@ int main(int argc, char* argv[]) {
         else if (!strcmp(tokenArray[0], "cd"))
             cd(&pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "creat"))
-            printf("Not fully implemented. See creatt.c for current implementation\n");
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "mkdir"))
-            printf("Not fully implemented. See mkdirr.c for current implementation\n");
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "mv"))
-            printf("Not fully implemented. See mvv.c for current implementation\n");
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "open"))
             cmdopen(pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo, head);
         else if (!strcmp(tokenArray[0], "close"))
@@ -92,15 +93,15 @@ int main(int argc, char* argv[]) {
         else if (!strcmp(tokenArray[0], "read"))
             readFile(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "write"))
-            printf("Not fully implemented. See write.c for current implementation\n");
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "rm"))
             rm(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "cp"))
-            printf("Not fully implemented. See cp.c for current implementation\n");
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "rmdir"))
-            printf("Not fully implemented. See rmdirr.c for current implementation\n");
+            rmdirr(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "cp") && !strcmp(tokenArray[1], "-r"))
-            printf("Not fully implemented. See cp-r.c for current implementation\n");
+            printf("Not fully implemented\n");
         else if (tokenArray[0] != NULL)
             printf("Error: %s is an unknown command\n", tokenArray[0]);
 
