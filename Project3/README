@@ -53,6 +53,7 @@ Tar archive contents:
 	rm.c: Implementation of the rm function
 	rm.h: Header file for rm.c
 	rmdirr.c: Implementation of the rmdir function
+	rmdirr.h: Header file for rmdirr.c
 	size.c: Implementation of the size function
 	size.h: Header file for size.c
 	write.c: Implementation of the write function
