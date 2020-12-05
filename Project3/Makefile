@@ -1,4 +1,2 @@
-make: main.c helpers.c ls.c cd.c rm.c lseek.c read.c creatt.c mkdirr.c cmdopen.c cmdclose.c
-	gcc main.c helpers.c ls.c cd.c rm.c lseek.c read.c creatt.c mkdirr.c cmdopen.c size.c info.c exit.c cmdclose.c -std=c11 -o Project3
-debug: main.c helpers.c ls.c cd.c rm.c lseek.c read.c creatt.c mkdirr.c cmdopen.c cmdclose.c
-	gcc -g -w main.c helpers.c ls.c cd.c rm.c lseek.c read.c creatt.c mkdirr.c cmdopen.c size.c info.c exit.c cmdclose.c -std=c11
+make: main.c helpers.c ls.c cd.c rm.c lseek.c read.c cmdopen.c cmdclose.c size.c info.c exit.c
+	gcc main.c helpers.c ls.c cd.c rm.c lseek.c read.c cmdopen.c size.c info.c exit.c cmdclose.c -std=c11 -o Project3

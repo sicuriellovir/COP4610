@@ -353,9 +353,7 @@ int Remove(struct DIRENTRY* entry, struct openFile* head)
                 head->entry->DIR_name[0] = '\0';
             else if (temp == head)
             {
-                *head = *head->next;
-                free(head->previous->entry);
-                free(head->previous);
+                *head = *(head->next);
                 head->previous = NULL;
             }
             else

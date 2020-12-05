@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-
+#include <unistd.h>
 
 void CopyRecursive( char* from , char* to)
 {
@@ -20,10 +20,10 @@ void CopyRecursive( char* from , char* to)
     if (0 != access(to, F_OK)) {
         if (ENOENT == errno) {
              // does not exist
-             mkdir(to,0777);
+             //mkdir(to,0777);
              char c2[100];
               strcpy(c2, to);
-              copy_file(from,c2);
+              //copy_file(from,c2);
         }
     }
 }

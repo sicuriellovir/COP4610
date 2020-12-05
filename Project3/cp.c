@@ -3,8 +3,10 @@
 #include <fcntl.h>
 #include <string.h>
 #include "helpers.h"
+#include <errno.h>
+#include <unistd.h>
 
-void copyFile(char* file , DIRENTRY* dir)
+void copyFile(char* file , struct DIRENTRY* dir)
 {
     if (0 != access(dir->DIR_name, F_OK))
     {
@@ -26,9 +28,3 @@ void copyFile(char* file , DIRENTRY* dir)
         return; 
     }
 }
-
-/*void main()
-{
-    printf("This is main function");
-    writeToFile("asd.txt","26",3);
-}*/

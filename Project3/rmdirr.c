@@ -4,11 +4,13 @@
 #include <fcntl.h>
 #include <string.h>
 
+void _removeDir(struct DIRENTRY* entry, int fatFile_fp, struct BPBInfo* info);
+
 /*removes a file from the current directory and frees its data cluster(s). takes in the start
 cluster of the current directory, the file name to remove (if possible), the fat32 file pointer,
 and the BPBInfo on the fat32 file. if NULL is passed in for fileName, this function does nothing*/
 //NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
-void rm(unsigned int pwdStartCluster, char* fileName, int fatFile_fp, struct BPBInfo* info)
+void rmdirr(unsigned int pwdStartCluster, char* fileName, int fatFile_fp, struct BPBInfo* info)
 {
     if (fileName == NULL)
         return;
@@ -20,10 +22,10 @@ void rm(unsigned int pwdStartCluster, char* fileName, int fatFile_fp, struct BPB
     {
         if (!strcasecmp(fileName, dirEntryArray[i]->DIR_name))
         {
-            if (dirEntryArray[i]->DIR_Attributes == 0x20)
-                _removeFile(dirEntryArray[i], fatFile_fp, info);
+            if (dirEntryArray[i]->DIR_Attributes == 0x10)
+                _removeDir(dirEntryArray[i], fatFile_fp, info);
             else
-                printf("Error: %s is a directory, not a file\n", fileName);
+                printf("Error: %s is a file, not a directory\n", fileName);
 
             _freeDirEntryArray(dirEntryArray);
             return;
@@ -35,7 +37,7 @@ void rm(unsigned int pwdStartCluster, char* fileName, int fatFile_fp, struct BPB
 
 //Removes a file's direntry, clears the file's data (replaced with all 0's), and sets each cluster as available.
 //NOTE: MAKE SURE THE BPBInfo HAS BEEN INITIALIZED USING THE BPBInfoInit FUNCTION
-void _removeFile(struct DIRENTRY* entry, int fatFile_fp, struct BPBInfo* info)
+void _removeDir(struct DIRENTRY* entry, int fatFile_fp, struct BPBInfo* info)
 {
     unsigned int* currentCluster = &entry->DIR_DataCluster;
     unsigned int temp;

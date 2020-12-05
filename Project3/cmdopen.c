@@ -5,12 +5,18 @@
 
 void cmdopen(unsigned int pwdStartCluster, char* dirName, char *mode, int fatFile_fp, struct BPBInfo* info, struct openFile* head)
 {
+	if (mode == NULL)
+	{
+		printf("Error: invalid mode used\n");
+		return;
+	}
+
     struct DIRENTRY** pwdEntries = _getDirEntriesFromAllClusters(pwdStartCluster, fatFile_fp, info);
     struct openFile* tempFile = NULL;
 
     for (int i = 0; pwdEntries[i] != NULL; i++)
     {
-        if (!strcasecmp(pwdEntries[i], dirName) && !OpenFile(pwdEntries[i], head))
+        if (!strcasecmp(pwdEntries[i]->DIR_name, dirName) && !OpenFile(pwdEntries[i], head))
         {
             tempFile = (struct openFile *) malloc(sizeof(struct openFile));
             tempFile->entry = pwdEntries[i];
@@ -29,6 +35,13 @@ void cmdopen(unsigned int pwdStartCluster, char* dirName, char *mode, int fatFil
         tempFile->mode = WRITEONLY;
     else if (!strcmp(mode, "rw") || !strcmp(mode, "wr"))
         tempFile->mode = READANDWRITE;
+    else
+    {
+    	printf("Error: invalid mode used\n");
+    	_freeDirEntryArray(pwdEntries);
+    	free(tempFile);
+    	return;
+    }
 
     addFile(head, tempFile);
     _freeDirEntryArray(pwdEntries);

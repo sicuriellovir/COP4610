@@ -10,7 +10,7 @@ void cmdclose(char* fileName, struct openFile *head, unsigned int pwdStartCluste
     struct DIRENTRY** pwdEntries = _getDirEntriesFromAllClusters(pwdStartCluster, fatFile_fp, info);
     for (int i1 = 0; pwdEntries[i1] != NULL; i1++)
     {
-        if (!strcasecmp(fileName, pwdEntries[i1]) && OpenFile(pwdEntries[i1], head))
+        if (!strcasecmp(fileName, pwdEntries[i1]->DIR_name) && OpenFile(pwdEntries[i1], head))
         {
             for (struct openFile* i2 = head; i2 != NULL && temp == NULL; i2 = i2->next) {
                 if (!strcasecmp(fileName, i2->entry->DIR_name))

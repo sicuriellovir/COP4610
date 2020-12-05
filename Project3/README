@@ -1,1 +1,76 @@
+Project 3    |     Introduction to Operating Systems   |   COP 4610
+
+Team members:  Alec Walter (Github: apwal1), Virginia Sicuriello Level (Github: sicuriellovir), Sean (Yixuan) Liu (Github: Designexplained)
+
+Division of Labor:
+	Alec Walter (Github apwal1):
+	Contributed to ls, cd, lseek, read and rm functions
+	Contributed to some functions in helpers.c
+	Contributed to documentation
+
+	Virginia Sicuriello Level (Github: sicuriellovir):
+	Contributed to creat, mkdir, mv, open and close functions
+	Contributed to some functions in helpers.c
+	Contributed to documentation
+
+	Sean (Yixuan) Liu (Github: Designexplained):
+	Contributed to exit, info, size, write, cp, rmdir and cp -r functions
+	Contributed to documentation
+
+Tar archive contents:
+
+	README: This documentation file
+	GITLog1: First snapshot of our github commit log
+	GITLog2: Second snapshot of our github commit log
+	Makefile: Used to compile our project with the "make" command
+	cd.c: Implementation of the cd function
+	cd.h: Header file for cd.c
+	cmdclose.c: Implementation of the close function
+	cmdclose.h: Header file for cmdclose.c
+	cmdopen.c: Implementation of the open function
+	cmdopen.h: Header file for cmdopen.c
+	cp.c: Implementation of the cp function (incomplete, left out of program to avoid crashes)
+	cp-r.c: Implementation of the cp -r function (incomplete, left out of program to avoid crashes)
+	creatt.c: Implementation of the creat function (incomplete, left out of program to avoid crashes)
+	creatt.h: Header file for creatt.c
+	exit.c: Implementation of the exit function
+	exit.h: Header file for exit.c
+	helpers.c: Contains many structs and functions used by the other parts of the project
+	helpers.h: Header file for helpers.c
+	info.c: Implementation of the info function
+	info.h: Header file for info.c
+	ls.c: Implementation of the ls function
+	ls.h: Header file for ls.c
+	lseek.c: Implementation of the lseek function
+	lseek.h: Header file for lseek.c
+	main.c: Entry point for our program
+	mkdirr.c: Implementation of the mkdir function (incomplete, left out of program to avoid crashes)
+	mkdirr.h: Header file for mkdirr.c
+	mvv.c: Implementation of the mv function (incomplete, left out of program to avoid crashes)
+	mvv.h: Header file for mvv.c
+	read.c: Implementation of the read function
+	read.h: Header file for read.c
+	rm.c: Implementation of the rm function
+	rm.h: Header file for rm.c
+	rmdirr.c: Implementation of the rmdir function
+	size.c: Implementation of the size function
+	size.h: Header file for size.c
+	write.c: Implementation of the write function
+
+Compiling and using the program:
+
+	To compile, open a terminal in the directory extracted from the tar archive and type "make" without quotes. This will create an executable named Project3. After running this executable (with the filepath of the fat32 image as a command line argument), you will be prompted to enter the filename/path to a fat32 image. If the image is found, you may start entering commands as specified in the project specifications. Many functions were not implemented, so if you try to use one of them the program will tell you it is not implemented.
+
+Known bugs and incomplete portions of the project:
+	Bugs:
+		- Be sure to use the commands as they are described in the project specifications. If you, for example, use the command "size" without specifying a filename, the program will have a segmentation fault and crash. This is also the case with other functions such as close, lseek and read. This shouldn't be a problem as long as commands are issued in the format described in the project specifications, but it is still worth noting.
+	
+	Incomplete portions:
+		- cp
+		- cp -r
+		- creat
+		- mkdir
+		- mv
+
+Fixed bugs:
 

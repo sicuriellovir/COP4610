@@ -7,8 +7,6 @@
 #include "rm.h"
 #include "lseek.h"
 #include "read.h"
-#include "creatt.h"
-#include "mkdirr.h"
 #include "cmdopen.h"
 #include "cmdclose.h"
 #include "size.h"
@@ -18,9 +16,9 @@
 char** getTokens(char* str);
 void freeTokenArray(char** tokenArray);
 
-int main() {
+int main(int argc, char* argv[]) {
     //character buffer for the FAT32 filename
-    char filename[51];
+    char filename[101];
     //character buffer for user input (1024 chars plus null char)
     char input[1025] = "\0";
     //holds the STARTING cluster number of the current directory
@@ -35,19 +33,20 @@ int main() {
 
     struct openFile* ptr;
 
-    printf("Enter image filename (up to 50 chars): ");
+    if (argc != 2)
+    {
+        printf("Error: Please specify the file path of the fat32 image file\n");
+        return 0;
+    }
 
-    //gets input from user (max 50 characters) and puts it in filename buffer
-    scanf("%50[^\n]", filename);
-    getchar();
+    strncpy(filename, argv[1], 100);
 
     //open the file for reading and writing
     imgFile = open(filename, O_RDWR);
     if (imgFile == -1)
     {
-        printf("Error: Could not open file %s\n", filename);
-        close(imgFile);
-        return 0;
+        printf("Error: Could not open file %s. Please ensure the file exists and the file path is at most 100 characters\n", filename);
+        exitAllPrograms(head, imgFile);
     }
 
     struct BPBInfo fileInfo;
@@ -79,13 +78,11 @@ int main() {
         else if (!strcmp(tokenArray[0], "cd"))
             cd(&pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "creat"))
-            creatt(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "mkdir"))
-            mkdirr(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "mv"))
-        {
-            //call mv
-        }
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "open"))
             cmdopen(pwdStartCluster, tokenArray[1], tokenArray[2], imgFile, &fileInfo, head);
         else if (!strcmp(tokenArray[0], "close"))
@@ -95,15 +92,15 @@ int main() {
         else if (!strcmp(tokenArray[0], "read"))
             readFile(pwdStartCluster, head, tokenArray[1], atoi(tokenArray[2]), imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "write"))
-        {
-            //call write
-        }
+            printf("Not fully implemented\n");
         else if (!strcmp(tokenArray[0], "rm"))
             rm(pwdStartCluster, tokenArray[1], imgFile, &fileInfo);
         else if (!strcmp(tokenArray[0], "cp"))
-        {
-            //call cp
-        }
+            printf("Not fully implemented\n");
+        else if (!strcmp(tokenArray[0], "rmdir"))
+            printf("Not fully implemented\n");
+        else if (!strcmp(tokenArray[0], "cp") && !strcmp(tokenArray[1], "-r"))
+            printf("Not fully implemented\n");
         else if (tokenArray[0] != NULL)
             printf("Error: %s is an unknown command\n", tokenArray[0]);
 
@@ -115,7 +112,7 @@ int main() {
 
 char** getTokens(char* str)
 {
-    char* temp;
+    char* temp = NULL;
     char* buf = (char*) malloc(strlen(str) + 1);
     char** tokens = (char**) malloc(sizeof(char*));
     tokens[0] = NULL;
@@ -131,6 +128,7 @@ char** getTokens(char* str)
         temp = strtok(NULL, " ");
     }
 
+    strcpy(buf, str);
     free(buf);
     return tokens;
 }
