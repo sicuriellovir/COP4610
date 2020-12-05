@@ -53,10 +53,9 @@ Tar archive contents:
 	rm.c: Implementation of the rm function
 	rm.h: Header file for rm.c
 	rmdirr.c: Implementation of the rmdir function
-	rmdirr.h: Header file for rmdirr.c
 	size.c: Implementation of the size function
 	size.h: Header file for size.c
-	write.c: Implementation of the write function
+	write.c: Implementation of the write function (incomplete, left out of program to avoid crashes)
 
 Compiling and using the program:
 
@@ -72,9 +71,11 @@ Known bugs and incomplete portions of the project:
 		- creat
 		- mkdir
 		- mv
+		As you can see, every function that required us to add data/entries to the fat32 image was incomplete. This proved to be especially challenging to our group and, while we did attempt to implement them, we could not do so by the project deadline without either crashing the program or corrupting the fat32 image.
 
 Fixed bugs:
 	- Fixed close function not removing from the openFile linked list properly
 	- Fixed open not detecting invalid modes
-	- Fixed ls not reading files from directories that span multiple clusters
+	- Fixed ls not reading every file from directories that span multiple clusters
+	- Fixed segmentation fault that happens when a file is opened, closed, then re-opened
 
